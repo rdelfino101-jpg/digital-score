@@ -1,0 +1,6 @@
+{
+  "name": "Scoreboard Studio - Marcador Digital para Eventos",
+  "description": "Sistema de marcador digital multipropósito para eventos en vivo con soporte de doble pantalla, sincronización en tiempo real vía BroadcastChannel y modos 1 vs 1 y multijugador.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
