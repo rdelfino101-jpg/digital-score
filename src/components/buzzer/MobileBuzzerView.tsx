@@ -327,21 +327,24 @@ export const MobileBuzzerView: React.FC = () => {
               ¡Fueron los primeros!
             </div>
 
-            {/* Answer countdown ring */}
-            <div className="relative w-48 h-48 flex items-center justify-center mb-6">
-              <div className="absolute inset-0 rounded-full border-8 border-white/20" />
-              <div className="text-5xl font-mono font-black text-white drop-shadow">
-                {answerSecRemaining}s
-              </div>
-            </div>
+            {/* En los juegos no hay tiempo límite (califica el director), así que no se muestra la cuenta */}
+            {!buzzerState?.config?.useBuzzersInGameStage && (
+              <>
+                <div className="relative w-48 h-48 flex items-center justify-center mb-6">
+                  <div className="absolute inset-0 rounded-full border-8 border-white/20" />
+                  <div className="text-5xl font-mono font-black text-white drop-shadow">
+                    {answerSecRemaining}s
+                  </div>
+                </div>
 
-            {/* Progress bar */}
-            <div className="w-64 h-3 bg-black/30 rounded-full overflow-hidden border border-white/30 p-0.5">
-              <div
-                className="h-full bg-white rounded-full transition-all duration-100 ease-linear"
-                style={{ width: `${answerProgressPct}%` }}
-              />
-            </div>
+                <div className="w-64 h-3 bg-black/30 rounded-full overflow-hidden border border-white/30 p-0.5">
+                  <div
+                    className="h-full bg-white rounded-full transition-all duration-100 ease-linear"
+                    style={{ width: `${answerProgressPct}%` }}
+                  />
+                </div>
+              </>
+            )}
 
             <p className="mt-6 text-sm text-white/90 font-bold uppercase tracking-wider bg-black/30 px-4 py-2 rounded-full border border-white/20">
               ¡Respondan ahora al micrófono!

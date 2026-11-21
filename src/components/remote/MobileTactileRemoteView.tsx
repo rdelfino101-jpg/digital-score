@@ -99,6 +99,28 @@ const SONIDOS: Array<{ id: string; label: string; icon: string }> = [
 ];
 
 const LETRAS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
+
+/**
+ * Reloj que avanza en el celular entre una sincronización y otra.
+ * La consola manda el tiempo una vez por segundo; sin esto el número se veía a saltos
+ * o atrasado. Cuando llega un valor nuevo de la consola, se corrige.
+ */
+function useRelojEnVivo(segundos: number, corriendo: boolean, sentido: 'baja' | 'sube'): number {
+  const [base, setBase] = useState({ valor: segundos, desde: Date.now() });
+  const [, setTic] = useState(0);
+  useEffect(() => {
+    setBase({ valor: segundos, desde: Date.now() });
+  }, [segundos, corriendo]);
+  useEffect(() => {
+    if (!corriendo) return;
+    const id = setInterval(() => setTic((t) => t + 1), 250);
+    return () => clearInterval(id);
+  }, [corriendo]);
+  if (!corriendo) return segundos;
+  // Como mucho 1 s de adelanto: si la consola deja de mandar, el reloj no se inventa el tiempo
+  const pasado = Math.min(1, Math.floor((Date.now() - base.desde) / 1000));
+  return sentido === 'baja' ? Math.max(0, base.valor - pasado) : base.valor + pasado;
+}
 const sinAcento = (c: string) => c.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
 
 /**
@@ -123,6 +145,7 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
   const [errorPin, setErrorPin] = useState<string | null>(() => mensajeErrorRemoto(authError));
   const [borradorCintillo, setBorradorCintillo] = useState<string | null>(null);
   const [confirmarReinicioSorteo, setConfirmarReinicioSorteo] = useState(false);
+  const [cantidadLibre, setCantidadLibre] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -136,6 +159,11 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
   }, [authError]);
 
   const bloqueado = connectionStatus !== 'connected' || !isAuthenticated;
+  const relojPrincipal = useRelojEnVivo(
+    masterState ? (masterState.timer.mode === 'countdown' ? masterState.timer.secondsRemaining : masterState.timer.stopwatchSeconds) : 0,
+    Boolean(masterState?.timer.isRunning && masterState.timer.mode !== 'off'),
+    masterState?.timer.mode === 'stopwatch' ? 'sube' : 'baja'
+  );
 
   const vibrar = (ms = 35) => {
     if (vibracion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -314,6 +342,38 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
                         </button>
                       ))}
                     </div>
+                    {/* Otra cantidad: para correcciones grandes (p. ej. −300) */}
+                    <div className="mt-1.5 grid grid-cols-[1fr_auto_auto] gap-1.5 pl-1">
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        value={cantidadLibre[t.id] ?? ''}
+                        onChange={(e) => setCantidadLibre((c) => ({ ...c, [t.id]: e.target.value.replace(/[^0-9]/g, '').slice(0, 5) }))}
+                        placeholder="Otra cantidad"
+                        aria-label={`Otra cantidad para ${t.name}`}
+                        className="h-11 min-w-0 rounded-xl border border-[var(--c-line)] bg-[var(--c-bg)] px-3 font-mono text-[16px] focus:border-[var(--c-accent)] focus:outline-none"
+                      />
+                      {[-1, 1].map((signo) => {
+                        const n = parseInt(cantidadLibre[t.id] || '', 10);
+                        return (
+                          <button
+                            key={signo}
+                            onClick={() => {
+                              if (!n) return;
+                              enviar('QUICK_ADJUST', { teamId: t.id, delta: signo * n }, 40);
+                              setCantidadLibre((c) => ({ ...c, [t.id]: '' }));
+                            }}
+                            disabled={bloqueado || !n}
+                            className={`h-11 rounded-xl px-3.5 text-[14px] font-bold disabled:opacity-40 ${
+                              signo > 0 ? 'bg-[var(--c-accent)] text-white' : 'bg-[var(--c-panel-2)] text-[var(--c-text)]'
+                            }`}
+                          >
+                            {signo > 0 ? 'Sumar' : 'Restar'}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
@@ -468,7 +528,7 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
                 ))}
               </div>
               <p className={`text-center font-mono text-[52px] font-black leading-none ${s.timer.mode === 'off' ? 'opacity-40' : ''}`}>
-                {formatTimeDisplay(s.timer.mode === 'countdown' ? s.timer.secondsRemaining : s.timer.stopwatchSeconds)}
+                {formatTimeDisplay(relojPrincipal)}
               </p>
               <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
                 <Boton
@@ -790,26 +850,25 @@ const PanelJuego: React.FC<{
         <FichaJuego s={s} enviar={enviar} bloqueado={bloqueado} />
       </section>
 
+      {id === 'millionaire_show' && <ControlesMillonario s={s} enviar={enviar} bloqueado={bloqueado} />}
+      {id === 'deal_or_nodeal' && <ControlesTratoHecho s={s} enviar={enviar} bloqueado={bloqueado} />}
+
       {/* Navegación del juego */}
+      {!especial && (
       <div className="grid grid-cols-3 gap-2">
-        <Boton tipo="neutro" grande onClick={() => enviar('PREV_GAME_ITEM')} disabled={bloqueado || id === 'deal_or_nodeal'}>
+        <Boton tipo="neutro" grande onClick={() => enviar('PREV_GAME_ITEM')} disabled={bloqueado}>
           <ChevronLeft className="h-5 w-5" /> Anterior
         </Boton>
-        <Boton tipo="neutro" grande onClick={() => enviar('REVEAL_GAME_ANSWER')} disabled={bloqueado || especial || id === 'family_feud'}>
+        <Boton tipo="neutro" grande onClick={() => enviar('REVEAL_GAME_ANSWER')} disabled={bloqueado || id === 'family_feud'}>
           <Eye className="h-5 w-5" /> Revelar
         </Boton>
-        <Boton tipo="neutro" grande onClick={() => enviar('NEXT_GAME_ITEM')} disabled={bloqueado || id === 'deal_or_nodeal'}>
+        <Boton tipo="neutro" grande onClick={() => enviar('NEXT_GAME_ITEM')} disabled={bloqueado}>
           Siguiente <ChevronRight className="h-5 w-5" />
         </Boton>
       </div>
+      )}
 
-      {especial ? (
-        <p className="rounded-xl bg-[var(--c-panel)] p-3 text-[14px] text-[var(--c-text-2)]">
-          {id === 'millionaire_show'
-            ? 'Los comodines, la respuesta definitiva y retirarse se manejan desde la consola. Aquí ves la respuesta correcta.'
-            : 'Abrir maletines y la oferta de la banca se manejan desde la consola.'}
-        </p>
-      ) : (
+      {especial ? null : (
         <div className="grid grid-cols-2 gap-2">
           <Boton
             tipo="verde"
@@ -945,21 +1004,7 @@ const FichaJuego: React.FC<{
       const st = g.charades;
       const it = st.items[st.currentIndex];
       if (!it) return <Pie>Sin palabras cargadas.</Pie>;
-      return (
-        <>
-          <p className="text-[24px] font-bold leading-tight">{it.word}</p>
-          <Pie>{it.category}</Pie>
-          <div className="mt-3 flex items-end justify-between">
-            <p className="text-[14px] text-[var(--c-text-2)]">
-              Aciertos <strong className="font-mono text-[20px] text-[var(--c-text)]">{st.correctCount}</strong> · Pasadas{' '}
-              {st.skippedCount}
-            </p>
-            <p className={`font-mono text-[34px] font-black leading-none ${st.remainingSeconds <= 10 ? 'text-amber-300' : ''}`}>
-              {formatTimeDisplay(st.remainingSeconds)}
-            </p>
-          </div>
-        </>
-      );
+      return <FichaCharadas s={s} />;
     }
     case 'family_feud': {
       const st = g.familyFeud;
@@ -1066,32 +1111,297 @@ const FichaJuego: React.FC<{
       return (
         <>
           <Pie>
-            Nivel {it.level} · {it.points} pts · acumulado {st.accumulatedPoints}
+            Nivel {st.currentLevel} de {st.items.length} · vale {it.points} pts · acumulado {st.accumulatedPoints}
+            {st.gameStatus === 'failed' ? ' · falló' : st.gameStatus === 'walked_away' ? ' · se retiró' : st.gameStatus === 'won_top' ? ' · ¡ganó todo!' : ''}
           </Pie>
           <Pregunta>{it.question}</Pregunta>
-          <Respuesta>
-            {it.correctAnswer}. {it.options[it.correctAnswer]}
-          </Respuesta>
+          <div className="mt-3 grid grid-cols-1 gap-1.5">
+            {(['A', 'B', 'C', 'D'] as const).map((k) => {
+              const correcta = it.correctAnswer === k;
+              const elegida = st.selectedOption === k;
+              const oculta = st.hiddenOptions5050.includes(k);
+              return (
+                <button
+                  key={k}
+                  onClick={() => enviar('MIL_SELECT', { option: k }, 30)}
+                  disabled={bloqueado || oculta || st.revealed}
+                  className={`flex min-h-12 items-center gap-2 rounded-xl border px-3 py-2 text-left text-[15px] ${
+                    elegida
+                      ? st.isFinalAnswer
+                        ? 'border-amber-400 bg-amber-500/20'
+                        : 'border-[var(--c-accent)] bg-[var(--c-accent-soft)]'
+                      : 'border-[var(--c-line)] bg-[var(--c-panel-2)]'
+                  } ${oculta ? 'opacity-30' : ''}`}
+                >
+                  <span className="font-bold">{k}.</span>
+                  <span className="min-w-0 flex-1">{it.options[k]}</span>
+                  {st.audiencePollResults && <span className="shrink-0 font-mono text-[13px] text-[var(--c-text-3)]">{st.audiencePollResults[k]}%</span>}
+                  {correcta && <Check className="h-5 w-5 shrink-0 text-emerald-400" aria-label="Correcta" />}
+                </button>
+              );
+            })}
+          </div>
+          {st.showPhoneCall && <LlamadaEnVivo s={s} />}
         </>
       );
     }
     case 'deal_or_nodeal': {
       const st = g.dealOrNoDeal;
       const abiertos = st.briefcases.filter((x) => x.isOpen).length;
+      const eligiendo = st.gameStatus === 'selecting_own' || st.contestantBriefcaseNumber === null;
+      const textoEstado = eligiendo
+        ? 'Toca el maletín que elige el concursante'
+        : st.gameStatus === 'opening_cases'
+        ? `Ronda ${st.currentRound}: abrir ${st.briefcasesToOpenThisRound - st.briefcasesOpenedThisRound} más`
+        : st.gameStatus === 'banker_offer'
+        ? 'La banca hace su oferta'
+        : st.gameStatus === 'deal_accepted'
+        ? `¡Trato hecho! ${st.finalWinnings ?? st.bankerOffer} pts`
+        : `Su maletín tenía ${st.finalWinnings ?? '—'}`;
       return (
         <>
-          <Pregunta>
-            {abiertos} de {st.briefcases.length} maletines abiertos
-          </Pregunta>
+          <Pregunta>{textoEstado}</Pregunta>
           <Pie>
-            Maletín del concursante: {st.contestantBriefcaseNumber ?? '—'} · Oferta de la banca: {st.bankerOffer || '—'}
+            {abiertos} de {st.briefcases.length} abiertos · su maletín: {st.contestantBriefcaseNumber ?? '—'} · los valores solo los ves tú
           </Pie>
+          <div className="mt-3 grid grid-cols-4 gap-1.5">
+            {st.briefcases.map((m) => {
+              const abriendo = st.revealingBriefcaseId === m.id;
+              const propio = m.isContestantBriefcase;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() =>
+                    eligiendo ? enviar('DEAL_SELECT_OWN', { number: m.number }, 40) : enviar('DEAL_OPEN', { id: m.id }, 50)
+                  }
+                  disabled={
+                    bloqueado ||
+                    m.isOpen ||
+                    (!eligiendo && (propio || st.gameStatus !== 'opening_cases' || st.revealingBriefcaseId !== null))
+                  }
+                  className={`flex h-14 flex-col items-center justify-center rounded-xl border text-center ${
+                    m.isOpen
+                      ? 'border-transparent bg-[var(--c-bg)] text-[var(--c-text-3)] line-through'
+                      : propio
+                      ? 'border-amber-400 bg-amber-500/15'
+                      : abriendo
+                      ? 'border-[var(--c-accent)] bg-[var(--c-accent-soft)]'
+                      : 'border-[var(--c-line)] bg-[var(--c-panel-2)]'
+                  }`}
+                >
+                  <span className="text-[15px] font-bold leading-none">{m.number}</span>
+                  <span className="mt-0.5 font-mono text-[11px] leading-none text-[var(--c-text-3)]">{m.value}</span>
+                </button>
+              );
+            })}
+          </div>
         </>
       );
     }
     default:
       return null;
   }
+};
+
+/* =============================================================
+ * Charadas, llamada, Millonario y Trato hecho
+ * ============================================================= */
+const FichaCharadas: React.FC<{ s: MasterLiveState }> = ({ s }) => {
+  const st = s.gameStage.charades;
+  const it = st.items[st.currentIndex];
+  const restante = useRelojEnVivo(st.remainingSeconds, st.isRunning, 'baja');
+  if (!it) return null;
+  return (
+    <>
+      <p className="text-[24px] font-bold leading-tight">{it.word}</p>
+      <p className="mt-2 text-[13px] text-[var(--c-text-3)]">{it.category}</p>
+      <div className="mt-3 flex items-end justify-between">
+        <p className="text-[14px] text-[var(--c-text-2)]">
+          Aciertos <strong className="font-mono text-[20px] text-[var(--c-text)]">{st.correctCount}</strong> · Pasadas {st.skippedCount}
+        </p>
+        <p className={`font-mono text-[34px] font-black leading-none ${restante <= 10 ? 'text-amber-300' : ''}`}>
+          {formatTimeDisplay(restante)}
+        </p>
+      </div>
+    </>
+  );
+};
+
+const LlamadaEnVivo: React.FC<{ s: MasterLiveState }> = ({ s }) => {
+  const m = s.gameStage.millionaireShow;
+  const restante = useRelojEnVivo(m.phoneCallSecondsRemaining ?? 0, m.showPhoneCall, 'baja');
+  return (
+    <p className="mt-3 rounded-lg bg-amber-500/15 px-3 py-2 text-[15px] font-bold text-amber-200">
+      📞 Llamada en curso: {restante} s
+    </p>
+  );
+};
+
+const ControlesMillonario: React.FC<{
+  s: MasterLiveState;
+  enviar: (cmd: RemoteCommandType, payload?: any, ms?: number) => void;
+  bloqueado: boolean;
+}> = ({ s, enviar, bloqueado }) => {
+  const m = s.gameStage.millionaireShow;
+  const terminado = m.gameStatus !== 'playing';
+  const comodines: Array<{ cmd: RemoteCommandType; label: string; usado: boolean }> = [
+    { cmd: 'MIL_5050', label: '50:50', usado: m.lifelines.fiftyFifty },
+    { cmd: 'MIL_AUDIENCE', label: 'Público', usado: m.lifelines.audiencePoll },
+    { cmd: 'MIL_PHONE', label: 'Llamada', usado: m.lifelines.phoneCall },
+    { cmd: 'MIL_SWITCH', label: 'Cambiar', usado: m.lifelines.switchQuestion },
+  ];
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2">
+        <Boton
+          tipo={m.isFinalAnswer ? 'ambar' : 'neutro'}
+          grande
+          onClick={() => enviar('MIL_FINAL', null, 50)}
+          disabled={bloqueado || !m.selectedOption || m.revealed}
+        >
+          {m.isFinalAnswer ? '¿Definitiva? Sí' : '¿Respuesta definitiva?'}
+        </Boton>
+        <Boton tipo="accion" grande onClick={() => enviar('MIL_REVEAL', null, 70)} disabled={bloqueado || !m.selectedOption || m.revealed}>
+          <Eye className="h-5 w-5" /> Revelar
+        </Boton>
+      </div>
+
+      {m.revealed && m.isCorrect && m.gameStatus === 'playing' && (
+        <Boton tipo="verde" enorme onClick={() => enviar('MIL_NEXT_LEVEL', null, 60)} disabled={bloqueado}>
+          Siguiente nivel <ChevronRight className="h-6 w-6" />
+        </Boton>
+      )}
+
+      <section>
+        <Titulo>Comodines</Titulo>
+        <div className="grid grid-cols-4 gap-1.5">
+          {comodines.map((c) => (
+            <button
+              key={c.cmd}
+              onClick={() => enviar(c.cmd, null, 50)}
+              disabled={bloqueado || c.usado || m.revealed}
+              className={`h-12 rounded-xl border text-[13px] font-bold disabled:opacity-35 ${
+                c.usado ? 'border-transparent bg-[var(--c-bg)] text-[var(--c-text-3)] line-through' : 'border-[var(--c-line)] bg-[var(--c-panel)]'
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+        <div className="mt-1.5 grid grid-cols-3 gap-1.5">
+          <Boton tipo="neutro" onClick={() => enviar('MIL_TOGGLE_POLL')} disabled={bloqueado || !m.audiencePollResults}>
+            {m.showAudiencePoll ? 'Ocultar encuesta' : 'Ver encuesta'}
+          </Boton>
+          <Boton tipo="neutro" onClick={() => enviar('MIL_PHONE_STOP')} disabled={bloqueado || !m.showPhoneCall}>
+            Colgar
+          </Boton>
+          <Boton tipo="neutro" onClick={() => enviar('MIL_RESET_LIFELINES')} disabled={bloqueado}>
+            Restaurar
+          </Boton>
+        </div>
+      </section>
+
+      <section>
+        <Titulo>Premio (acumulado {m.accumulatedPoints} pts)</Titulo>
+        <div className="grid grid-cols-2 gap-2">
+          <Boton
+            tipo="ambar"
+            grande
+            onClick={() => enviar('MIL_WALK_AWAY', null, 70)}
+            disabled={bloqueado || terminado || m.accumulatedPoints <= 0}
+          >
+            Retirarse
+          </Boton>
+          <Boton
+            tipo="verde"
+            grande
+            onClick={() => enviar('MIL_AWARD', null, 70)}
+            disabled={bloqueado || m.pointsAwarded || m.accumulatedPoints <= 0 || m.gameStatus === 'playing'}
+          >
+            Dar {m.accumulatedPoints} pts
+          </Boton>
+        </div>
+        <div className="mt-2">
+          <Boton tipo="neutro" onClick={() => enviar('MIL_RESTART')} disabled={bloqueado}>
+            <RotateCcw className="h-4 w-4" /> Juego nuevo desde el nivel 1
+          </Boton>
+        </div>
+      </section>
+    </>
+  );
+};
+
+const ControlesTratoHecho: React.FC<{
+  s: MasterLiveState;
+  enviar: (cmd: RemoteCommandType, payload?: any, ms?: number) => void;
+  bloqueado: boolean;
+}> = ({ s, enviar, bloqueado }) => {
+  const d = s.gameStage.dealOrNoDeal;
+  const [oferta, setOferta] = useState('');
+  const quedanCerrados = d.briefcases.filter((b) => !b.isOpen && !b.isContestantBriefcase).length;
+  return (
+    <>
+      {d.gameStatus === 'banker_offer' && (
+        <section className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3.5">
+          <p className="text-[12px] font-semibold text-amber-300">Oferta de la banca</p>
+          <p className="font-mono text-[36px] font-black leading-none">{d.bankerOffer}</p>
+          <div className="mt-3 grid grid-cols-[1fr_auto] gap-1.5">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={oferta}
+              onChange={(e) => setOferta(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+              placeholder="Cambiar oferta"
+              aria-label="Cambiar la oferta de la banca"
+              className="h-11 min-w-0 rounded-xl border border-[var(--c-line)] bg-[var(--c-bg)] px-3 font-mono text-[16px] focus:border-[var(--c-accent)] focus:outline-none"
+            />
+            <button
+              onClick={() => {
+                const n = parseInt(oferta, 10);
+                if (!isNaN(n)) enviar('DEAL_SET_OFFER', { offer: n });
+                setOferta('');
+              }}
+              disabled={bloqueado || !oferta}
+              className="h-11 rounded-xl bg-[var(--c-panel-2)] px-3.5 text-[14px] font-bold disabled:opacity-40"
+            >
+              Usar
+            </button>
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <Boton tipo="verde" enorme onClick={() => enviar('DEAL_ACCEPT', null, 80)} disabled={bloqueado || d.pointsAwarded}>
+              ¡Trato hecho!
+            </Boton>
+            <Boton tipo="rojo" enorme onClick={() => enviar('DEAL_REJECT', null, 60)} disabled={bloqueado}>
+              No hay trato
+            </Boton>
+          </div>
+        </section>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        <Boton
+          tipo="neutro"
+          onClick={() => enviar('DEAL_BANKER_CALL', null, 50)}
+          disabled={bloqueado || d.contestantBriefcaseNumber === null || d.gameStatus === 'deal_accepted' || d.gameStatus === 'final_case_opened'}
+        >
+          📞 Llamar a la banca
+        </Boton>
+        <Boton
+          tipo="ambar"
+          onClick={() => enviar('DEAL_OPEN_OWN', null, 70)}
+          disabled={bloqueado || d.contestantBriefcaseNumber === null || quedanCerrados > 0 || d.gameStatus === 'final_case_opened'}
+        >
+          Abrir su maletín
+        </Boton>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Interruptor activo={d.suspenseActive} etiqueta="Suspenso al abrir" onClick={() => enviar('DEAL_TOGGLE_SUSPENSE')} disabled={bloqueado} tarjeta />
+        <Boton tipo="neutro" grande onClick={() => enviar('DEAL_SHUFFLE', null, 50)} disabled={bloqueado}>
+          <RotateCcw className="h-4 w-4" /> Mezclar y empezar
+        </Boton>
+      </div>
+    </>
+  );
 };
 
 /* =============================================================

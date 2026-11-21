@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+# Textos que Google AI Studio guarda al pegar prompts largos (no son parte de la app)
+public/assets/aistudio/

@@ -4,6 +4,9 @@ import {
   processFamilyFeudReveal,
   processFamilyFeudStrike,
   processHangmanGuess,
+  generateAudiencePoll,
+  calculateBankerOffer,
+  shuffleBriefcases,
 } from './gameEngineRules';
 
 /* -------------------------------------------------------------
@@ -27,6 +30,8 @@ export interface ResultadoAccion {
   esError?: boolean;
   /** Después de dar los puntos, pasar al siguiente equipo */
   siguienteTurno?: boolean;
+  /** Sonido que suena en la consola (como al tocar el botón allí) */
+  sonido?: 'correct' | 'error' | 'fanfare' | 'drumroll' | 'wheel' | 'turn' | 'timesUp';
 }
 
 const conJuego = <K extends keyof MasterLiveState['gameStage']>(
@@ -355,3 +360,345 @@ export const moverPregunta = (paso: 1 | -1): Actualizador => (prev) => {
 
   return { ...prev, gameStage: { ...prev.gameStage, [clave]: nuevo } };
 };
+
+
+/* =============================================================
+ * ¿Quién quiere ser millonario?
+ * ============================================================= */
+
+type Opcion = 'A' | 'B' | 'C' | 'D';
+type Mil = MasterLiveState['gameStage']['millionaireShow'];
+const conMil = (cambio: (m: Mil) => Mil) => conJuego('millionaireShow', cambio);
+
+const limpiarPreguntaMil = (m: Mil): Mil => ({
+  ...m,
+  selectedOption: null,
+  isFinalAnswer: false,
+  revealed: false,
+  isCorrect: null,
+  hiddenOptions5050: [],
+  audiencePollResults: null,
+  showAudiencePoll: false,
+  showPhoneCall: false,
+});
+
+export function milElegir(opcion: Opcion): ResultadoAccion {
+  return {
+    actualizar: conMil((m) => ({ ...m, selectedOption: opcion, isFinalAnswer: false, revealed: false, isCorrect: null })),
+    sonido: 'turn',
+  };
+}
+
+export function milRespuestaDefinitiva(): ResultadoAccion {
+  return { actualizar: conMil((m) => ({ ...m, isFinalAnswer: !m.isFinalAnswer })), sonido: 'drumroll' };
+}
+
+/** Revela y califica la opción elegida. Si falla, baja a la zona segura. */
+export function milRevelar(s: MasterLiveState): ResultadoAccion | null {
+  const m = s.gameStage.millionaireShow;
+  const item = m.items[m.currentIndex];
+  if (!item || !m.selectedOption || m.revealed) return null;
+  if (m.selectedOption === item.correctAnswer) {
+    const tope = m.currentLevel + 1 > m.items.length;
+    return {
+      actualizar: conMil((x) => ({
+        ...x,
+        revealed: true,
+        isCorrect: true,
+        accumulatedPoints: item.points,
+        gameStatus: tope ? 'won_top' : 'playing',
+      })),
+      sonido: 'correct',
+    };
+  }
+  let seguro = 0;
+  if (m.currentLevel > 10 && m.items[9]) seguro = m.items[9].points;
+  else if (m.currentLevel > 5 && m.items[4]) seguro = m.items[4].points;
+  return {
+    actualizar: conMil((x) => ({ ...x, revealed: true, isCorrect: false, accumulatedPoints: seguro, gameStatus: 'failed' })),
+    esError: true,
+  };
+}
+
+export function milSiguienteNivel(): ResultadoAccion {
+  return {
+    actualizar: conMil((m) => ({
+      ...limpiarPreguntaMil(m),
+      currentIndex: (m.currentIndex + 1) % Math.max(1, m.items.length),
+      currentLevel: Math.min(m.currentLevel + 1, m.items.length),
+    })),
+  };
+}
+
+export function mil5050(s: MasterLiveState): ResultadoAccion | null {
+  const m = s.gameStage.millionaireShow;
+  const item = m.items[m.currentIndex];
+  if (!item || m.lifelines.fiftyFifty) return null;
+  const malas = (['A', 'B', 'C', 'D'] as Opcion[]).filter((k) => k !== item.correctAnswer);
+  const ocultar = [...malas].sort(() => 0.5 - Math.random()).slice(0, 2);
+  return {
+    actualizar: conMil((x) => ({ ...x, lifelines: { ...x.lifelines, fiftyFifty: true }, hiddenOptions5050: ocultar })),
+    sonido: 'wheel',
+  };
+}
+
+export function milPublico(s: MasterLiveState): ResultadoAccion | null {
+  const m = s.gameStage.millionaireShow;
+  const item = m.items[m.currentIndex];
+  if (!item || m.lifelines.audiencePoll) return null;
+  const encuesta = generateAudiencePoll(item.correctAnswer);
+  return {
+    actualizar: conMil((x) => ({
+      ...x,
+      lifelines: { ...x.lifelines, audiencePoll: true },
+      audiencePollResults: encuesta,
+      showAudiencePoll: true,
+    })),
+    sonido: 'fanfare',
+  };
+}
+
+export function milVerEncuesta(): ResultadoAccion {
+  return { actualizar: conMil((m) => ({ ...m, showAudiencePoll: !m.showAudiencePoll })) };
+}
+
+export function milLlamada(s: MasterLiveState): ResultadoAccion | null {
+  if (s.gameStage.millionaireShow.lifelines.phoneCall) return null;
+  return {
+    actualizar: conMil((m) => ({
+      ...m,
+      lifelines: { ...m.lifelines, phoneCall: true },
+      showPhoneCall: true,
+      phoneCallSecondsRemaining: 30,
+    })),
+    sonido: 'wheel',
+  };
+}
+
+export function milTerminarLlamada(): ResultadoAccion {
+  return { actualizar: conMil((m) => ({ ...m, showPhoneCall: false, phoneCallSecondsRemaining: 0 })) };
+}
+
+export function milCambiarPregunta(s: MasterLiveState): ResultadoAccion | null {
+  const m = s.gameStage.millionaireShow;
+  if (m.lifelines.switchQuestion || m.items.length === 0) return null;
+  return {
+    actualizar: conMil((x) => ({
+      ...limpiarPreguntaMil(x),
+      lifelines: { ...x.lifelines, switchQuestion: true },
+      currentIndex: (x.currentIndex + 1) % x.items.length,
+    })),
+    sonido: 'wheel',
+  };
+}
+
+export function milRestaurarComodines(): ResultadoAccion {
+  return {
+    actualizar: conMil((m) => ({
+      ...m,
+      lifelines: { fiftyFifty: false, audiencePoll: false, phoneCall: false, switchQuestion: false },
+      hiddenOptions5050: [],
+      audiencePollResults: null,
+      showAudiencePoll: false,
+      showPhoneCall: false,
+      phoneCallSecondsRemaining: null,
+    })),
+  };
+}
+
+/** Se retira con lo acumulado: los puntos van al equipo en turno */
+export function milRetirarse(s: MasterLiveState): ResultadoAccion {
+  const m = s.gameStage.millionaireShow;
+  return {
+    actualizar: conMil((x) => ({ ...x, gameStatus: 'walked_away', pointsAwarded: true })),
+    puntos: m.pointsAwarded ? 0 : m.accumulatedPoints,
+    etiqueta: `Se retira con ${m.accumulatedPoints} pts en Millonario`,
+    sonido: 'fanfare',
+  };
+}
+
+/** Da lo acumulado (al ganar todo o al perder con zona segura) */
+export function milDarAcumulado(s: MasterLiveState): ResultadoAccion | null {
+  const m = s.gameStage.millionaireShow;
+  if (m.accumulatedPoints <= 0 || m.pointsAwarded) return null;
+  return {
+    actualizar: conMil((x) => ({ ...x, pointsAwarded: true })),
+    puntos: m.accumulatedPoints,
+    etiqueta: `Premio Millonario (+${m.accumulatedPoints} pts)`,
+    sonido: 'fanfare',
+  };
+}
+
+export function milReiniciar(): ResultadoAccion {
+  return {
+    actualizar: conMil((m) => ({
+      ...limpiarPreguntaMil(m),
+      currentIndex: 0,
+      currentLevel: 1,
+      accumulatedPoints: 0,
+      gameStatus: 'playing',
+      pointsAwarded: false,
+    })),
+  };
+}
+
+/** Un segundo menos en la llamada a un amigo (lo llama el reloj de la consola) */
+export const milTicLlamada: Actualizador = (prev) => {
+  const m = prev.gameStage.millionaireShow;
+  const r = m.phoneCallSecondsRemaining;
+  if (!m.showPhoneCall || r === null) return prev;
+  if (r <= 1) {
+    return {
+      ...prev,
+      gameStage: { ...prev.gameStage, millionaireShow: { ...m, phoneCallSecondsRemaining: 0, showPhoneCall: false } },
+    };
+  }
+  return { ...prev, gameStage: { ...prev.gameStage, millionaireShow: { ...m, phoneCallSecondsRemaining: r - 1 } } };
+};
+
+/* =============================================================
+ * Trato hecho
+ * ============================================================= */
+
+type Deal = MasterLiveState['gameStage']['dealOrNoDeal'];
+const conDeal = (cambio: (d: Deal) => Deal) => conJuego('dealOrNoDeal', cambio);
+
+export function dealElegirPropio(numero: number): ResultadoAccion | null {
+  return {
+    actualizar: conDeal((d) => ({
+      ...d,
+      briefcases: d.briefcases.map((b) => ({ ...b, isContestantBriefcase: b.number === numero })),
+      contestantBriefcaseNumber: numero,
+      gameStatus: 'opening_cases',
+      briefcasesOpenedThisRound: 0,
+    })),
+    sonido: 'turn',
+  };
+}
+
+/** Primer paso al abrir con suspenso: marca el maletín que se está abriendo */
+export function dealMarcarAbriendo(id: number): ResultadoAccion {
+  return { actualizar: conDeal((d) => ({ ...d, revealingBriefcaseId: id })), sonido: 'drumroll' };
+}
+
+/** Abre el maletín y calcula la oferta de la banca */
+export function dealAbrir(s: MasterLiveState, id: number): ResultadoAccion | null {
+  const d = s.gameStage.dealOrNoDeal;
+  const m = d.briefcases.find((b) => b.id === id);
+  if (!m || m.isOpen || m.isContestantBriefcase) return null;
+  return {
+    actualizar: conDeal((x) => {
+      const maletines = x.briefcases.map((b) => (b.id === id ? { ...b, isOpen: true } : b));
+      const abiertos = x.briefcasesOpenedThisRound + 1;
+      const restantes = maletines.filter((b) => !b.isOpen).map((b) => b.value);
+      return {
+        ...x,
+        briefcases: maletines,
+        lastOpenedBriefcaseId: id,
+        revealingBriefcaseId: null,
+        briefcasesOpenedThisRound: abiertos,
+        bankerOffer: calculateBankerOffer(restantes, x.currentRound),
+        gameStatus: abiertos >= x.briefcasesToOpenThisRound ? 'banker_offer' : x.gameStatus,
+      };
+    }),
+    sonido: m.value <= 100 ? 'fanfare' : m.value >= 1000 ? 'error' : 'wheel',
+  };
+}
+
+export function dealAbrirPropio(s: MasterLiveState): ResultadoAccion | null {
+  const propio = s.gameStage.dealOrNoDeal.briefcases.find((b) => b.isContestantBriefcase);
+  if (!propio) return null;
+  return {
+    actualizar: conDeal((d) => ({
+      ...d,
+      briefcases: d.briefcases.map((b) => (b.id === propio.id ? { ...b, isOpen: true } : b)),
+      finalWinnings: propio.value,
+      gameStatus: 'final_case_opened',
+    })),
+    sonido: 'fanfare',
+  };
+}
+
+export function dealLlamarBanca(s: MasterLiveState): ResultadoAccion {
+  const d = s.gameStage.dealOrNoDeal;
+  const oferta = calculateBankerOffer(
+    d.briefcases.filter((b) => !b.isOpen).map((b) => b.value),
+    d.currentRound
+  );
+  return {
+    actualizar: conDeal((x) => ({
+      ...x,
+      isBankerCallActive: true,
+      isBankerOfferPending: true,
+      bankerOffer: oferta,
+      gameStatus: 'banker_offer',
+    })),
+    sonido: 'wheel',
+  };
+}
+
+export function dealCambiarOferta(oferta: number): ResultadoAccion {
+  return { actualizar: conDeal((d) => ({ ...d, bankerOffer: Math.max(0, Math.round(oferta)) })) };
+}
+
+export function dealAceptar(s: MasterLiveState): ResultadoAccion | null {
+  const d = s.gameStage.dealOrNoDeal;
+  if (d.pointsAwarded) return null;
+  return {
+    actualizar: conDeal((x) => ({
+      ...x,
+      isBankerCallActive: false,
+      isBankerOfferPending: false,
+      bankerOfferAccepted: true,
+      gameStatus: 'deal_accepted',
+      finalWinnings: x.bankerOffer,
+      pointsAwarded: true,
+    })),
+    puntos: d.bankerOffer,
+    etiqueta: `¡Trato hecho con la banca! (+${d.bankerOffer} pts)`,
+    sonido: 'fanfare',
+  };
+}
+
+export function dealRechazar(): ResultadoAccion {
+  return {
+    actualizar: conDeal((d) => ({
+      ...d,
+      isBankerCallActive: false,
+      isBankerOfferPending: false,
+      bankerOfferAccepted: false,
+      currentRound: d.currentRound + 1,
+      briefcasesToOpenThisRound: Math.max(1, d.briefcasesToOpenThisRound - 1),
+      briefcasesOpenedThisRound: 0,
+      gameStatus: 'opening_cases',
+    })),
+    sonido: 'turn',
+  };
+}
+
+export function dealSuspenso(): ResultadoAccion {
+  return { actualizar: conDeal((d) => ({ ...d, suspenseActive: !d.suspenseActive })) };
+}
+
+export function dealMezclar(): ResultadoAccion {
+  return {
+    actualizar: conDeal((d) => ({
+      ...d,
+      briefcases: shuffleBriefcases(d.briefcases),
+      contestantBriefcaseNumber: null,
+      lastOpenedBriefcaseId: null,
+      revealingBriefcaseId: null,
+      bankerOffer: 0,
+      isBankerCallActive: false,
+      isBankerOfferPending: false,
+      bankerOfferAccepted: null,
+      currentRound: 1,
+      briefcasesToOpenThisRound: 4,
+      briefcasesOpenedThisRound: 0,
+      gameStatus: 'selecting_own',
+      finalWinnings: null,
+      pointsAwarded: false,
+    })),
+    sonido: 'wheel',
+  };
+}

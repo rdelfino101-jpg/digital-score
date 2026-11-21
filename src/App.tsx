@@ -82,6 +82,31 @@ import {
   modoReloj,
   cintillo,
   moverPregunta,
+  milElegir,
+  milRespuestaDefinitiva,
+  milRevelar,
+  milSiguienteNivel,
+  mil5050,
+  milPublico,
+  milVerEncuesta,
+  milLlamada,
+  milTerminarLlamada,
+  milCambiarPregunta,
+  milRestaurarComodines,
+  milRetirarse,
+  milDarAcumulado,
+  milReiniciar,
+  milTicLlamada,
+  dealElegirPropio,
+  dealMarcarAbriendo,
+  dealAbrir,
+  dealAbrirPropio,
+  dealLlamarBanca,
+  dealCambiarOferta,
+  dealAceptar,
+  dealRechazar,
+  dealSuspenso,
+  dealMezclar,
   type ResultadoAccion,
 } from './utils/remoteGameActions';
 import {
@@ -792,6 +817,18 @@ function DirectorOperatorStudio() {
     (r: ResultadoAccion | null) => {
       if (!r) return;
       if (r.actualizar) updateMaster(r.actualizar);
+      if (r.sonido && !r.esError) {
+        const sonidos: Record<string, () => void> = {
+          correct: () => studioAudio.playCorrect(),
+          error: () => studioAudio.playError(),
+          fanfare: () => studioAudio.playFanfare(),
+          drumroll: () => studioAudio.playDrumroll(),
+          wheel: () => studioAudio.playWheelClick(),
+          turn: () => studioAudio.playTurnChange(),
+          timesUp: () => studioAudio.playTimesUp(),
+        };
+        sonidos[r.sonido]?.();
+      }
       if (r.esError) {
         handleGameErrorWithBuzzer();
         return;
@@ -1177,6 +1214,90 @@ function DirectorOperatorStudio() {
           }
           break;
         }
+        // ----- Millonario -----
+        case 'MIL_SELECT': {
+          if (['A', 'B', 'C', 'D'].includes(payload?.option)) ejecutarAccionRemota(milElegir(payload.option));
+          break;
+        }
+        case 'MIL_FINAL':
+          ejecutarAccionRemota(milRespuestaDefinitiva());
+          break;
+        case 'MIL_REVEAL':
+          ejecutarAccionRemota(milRevelar(masterStateRef.current));
+          break;
+        case 'MIL_NEXT_LEVEL':
+          ejecutarAccionRemota(milSiguienteNivel());
+          break;
+        case 'MIL_5050':
+          ejecutarAccionRemota(mil5050(masterStateRef.current));
+          break;
+        case 'MIL_AUDIENCE':
+          ejecutarAccionRemota(milPublico(masterStateRef.current));
+          break;
+        case 'MIL_TOGGLE_POLL':
+          ejecutarAccionRemota(milVerEncuesta());
+          break;
+        case 'MIL_PHONE':
+          ejecutarAccionRemota(milLlamada(masterStateRef.current));
+          break;
+        case 'MIL_PHONE_STOP':
+          ejecutarAccionRemota(milTerminarLlamada());
+          break;
+        case 'MIL_SWITCH':
+          ejecutarAccionRemota(milCambiarPregunta(masterStateRef.current));
+          break;
+        case 'MIL_RESET_LIFELINES':
+          ejecutarAccionRemota(milRestaurarComodines());
+          break;
+        case 'MIL_WALK_AWAY':
+          ejecutarAccionRemota(milRetirarse(masterStateRef.current));
+          break;
+        case 'MIL_AWARD':
+          ejecutarAccionRemota(milDarAcumulado(masterStateRef.current));
+          break;
+        case 'MIL_RESTART':
+          ejecutarAccionRemota(milReiniciar());
+          break;
+        // ----- Trato hecho -----
+        case 'DEAL_SELECT_OWN': {
+          if (typeof payload?.number === 'number') ejecutarAccionRemota(dealElegirPropio(payload.number));
+          break;
+        }
+        case 'DEAL_OPEN': {
+          const id = payload?.id;
+          if (typeof id !== 'number') break;
+          const d = masterStateRef.current.gameStage.dealOrNoDeal;
+          if (d.revealingBriefcaseId !== null) break; // ya hay uno abriéndose
+          if (d.suspenseActive) {
+            ejecutarAccionRemota(dealMarcarAbriendo(id));
+            setTimeout(() => ejecutarAccionRemota(dealAbrir(masterStateRef.current, id)), 2500);
+          } else {
+            ejecutarAccionRemota(dealAbrir(masterStateRef.current, id));
+          }
+          break;
+        }
+        case 'DEAL_OPEN_OWN':
+          ejecutarAccionRemota(dealAbrirPropio(masterStateRef.current));
+          break;
+        case 'DEAL_BANKER_CALL':
+          ejecutarAccionRemota(dealLlamarBanca(masterStateRef.current));
+          break;
+        case 'DEAL_SET_OFFER': {
+          if (typeof payload?.offer === 'number' && isFinite(payload.offer)) ejecutarAccionRemota(dealCambiarOferta(payload.offer));
+          break;
+        }
+        case 'DEAL_ACCEPT':
+          ejecutarAccionRemota(dealAceptar(masterStateRef.current));
+          break;
+        case 'DEAL_REJECT':
+          ejecutarAccionRemota(dealRechazar());
+          break;
+        case 'DEAL_TOGGLE_SUSPENSE':
+          ejecutarAccionRemota(dealSuspenso());
+          break;
+        case 'DEAL_SHUFFLE':
+          ejecutarAccionRemota(dealMezclar());
+          break;
       }
     },
     [
@@ -1287,6 +1408,22 @@ function DirectorOperatorStudio() {
 
     return () => clearInterval(interval);
   }, [masterState.timer.isRunning, handleBroadcastSound]);
+
+  // Llamada a un amigo (Millonario): la cuenta la lleva la consola para que corra
+  // igual si se activó desde el control remoto
+  const llamadaActiva =
+    masterState.gameStage.millionaireShow.showPhoneCall &&
+    (masterState.gameStage.millionaireShow.phoneCallSecondsRemaining ?? 0) > 0;
+  useEffect(() => {
+    if (!llamadaActiva) return;
+    const interval = setInterval(() => {
+      const r = masterStateRef.current.gameStage.millionaireShow.phoneCallSecondsRemaining;
+      if (r !== null && r <= 1) studioAudio.playTimesUp();
+      else if (r !== null && r <= 6) studioAudio.playTick();
+      updateMaster(milTicLlamada);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [llamadaActiva, updateMaster]);
 
   // Charades Game internal round timer tick
   useEffect(() => {

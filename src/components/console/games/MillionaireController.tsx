@@ -44,44 +44,8 @@ export const MillionaireController: React.FC<MillionaireControllerProps> = ({
   const [newCorrect, setNewCorrect] = useState<'A' | 'B' | 'C' | 'D'>('A');
   const [newPoints, setNewPoints] = useState(100);
 
-  // Phone timer interval
-  useEffect(() => {
-    let interval: any;
-    if (stage.showPhoneCall && stage.phoneCallSecondsRemaining !== null && stage.phoneCallSecondsRemaining > 0) {
-      interval = setInterval(() => {
-        onUpdateState((prev) => {
-          const mil = prev.gameStage.millionaireShow;
-          const rem = mil.phoneCallSecondsRemaining;
-          if (rem === null || rem <= 1) {
-            studioAudio.playTimesUp();
-            return {
-              ...prev,
-              gameStage: {
-                ...prev.gameStage,
-                millionaireShow: {
-                  ...mil,
-                  phoneCallSecondsRemaining: 0,
-                  showPhoneCall: false,
-                },
-              },
-            };
-          }
-          if (rem <= 5) studioAudio.playTick();
-          return {
-            ...prev,
-            gameStage: {
-              ...prev.gameStage,
-              millionaireShow: {
-                ...mil,
-                phoneCallSecondsRemaining: rem - 1,
-              },
-            },
-          };
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [stage.showPhoneCall, stage.phoneCallSecondsRemaining, onUpdateState]);
+  // La cuenta de la llamada a un amigo la lleva la consola (App.tsx), para que corra
+  // igual si se activa desde el control remoto o con otra pestaña abierta.
 
   const handleSelectOption = (key: 'A' | 'B' | 'C' | 'D') => {
     studioAudio.playTurnChange();

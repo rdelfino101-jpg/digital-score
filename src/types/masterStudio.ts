@@ -667,7 +667,32 @@ export type RemoteCommandType =
   | 'NEXT_ROUND'
   | 'PREV_ROUND'
   | 'SET_TICKER'
-  | 'SET_SCOREBOARD_MODE';
+  | 'SET_SCOREBOARD_MODE'
+  // Millonario desde el remoto
+  | 'MIL_SELECT'
+  | 'MIL_FINAL'
+  | 'MIL_REVEAL'
+  | 'MIL_NEXT_LEVEL'
+  | 'MIL_5050'
+  | 'MIL_AUDIENCE'
+  | 'MIL_TOGGLE_POLL'
+  | 'MIL_PHONE'
+  | 'MIL_PHONE_STOP'
+  | 'MIL_SWITCH'
+  | 'MIL_RESET_LIFELINES'
+  | 'MIL_WALK_AWAY'
+  | 'MIL_AWARD'
+  | 'MIL_RESTART'
+  // Trato hecho desde el remoto
+  | 'DEAL_SELECT_OWN'
+  | 'DEAL_OPEN'
+  | 'DEAL_OPEN_OWN'
+  | 'DEAL_BANKER_CALL'
+  | 'DEAL_SET_OFFER'
+  | 'DEAL_ACCEPT'
+  | 'DEAL_REJECT'
+  | 'DEAL_TOGGLE_SUSPENSE'
+  | 'DEAL_SHUFFLE';
 
 export interface RemoteCommandMessage {
   type: 'REMOTE_COMMAND';
