@@ -3,6 +3,7 @@ import { StudioTeam } from '../../../types/masterStudio';
 import { rankStudioTeams } from '../../../utils/gameEngineRules';
 import { Trophy, Flame } from 'lucide-react';
 import { AnimatedScore } from './AnimatedScore';
+import { FitText } from './FitText';
 
 interface TeamBandProps {
   teams: StudioTeam[];
@@ -21,15 +22,17 @@ export const TeamBand: React.FC<TeamBandProps> = ({
   const isLargeTeamCount = teams.length >= 5;
 
   if (isLargeTeamCount) {
-    // 5-10 TEAMS: Vertical Right-Side Standings Column of 600px width
+    const isDense = ranked.length >= 8;
+
+    // 5-10 TEAMS: Full-height Vertical Right-Side Standings Column without scroll
     return (
       <aside
-        className={`flex w-[600px] flex-col gap-3 rounded-3xl border-2 border-[var(--p-line)] bg-[var(--p-panel)] p-6 shadow-md ${className}`}
+        className={`flex h-full min-h-0 w-[560px] shrink-0 flex-col gap-2.5 overflow-hidden rounded-3xl border-2 border-[var(--p-line)] bg-[var(--p-panel)] p-5 shadow-md ${className}`}
       >
-        <div className="flex items-center justify-between border-b border-[var(--p-line)] pb-3">
+        <div className="flex shrink-0 items-center justify-between border-b border-[var(--p-line)] pb-2.5">
           <div className="flex items-center gap-2">
             <Trophy className="h-6 w-6 text-[var(--p-accent-ink)]" />
-            <span className="font-projector text-[24px] font-black uppercase tracking-wider text-[var(--p-text)]">
+            <span className="font-projector text-[22px] font-black uppercase tracking-wider text-[var(--p-text)]">
               Posiciones en vivo
             </span>
           </div>
@@ -38,14 +41,19 @@ export const TeamBand: React.FC<TeamBandProps> = ({
           </span>
         </div>
 
-        <div className="flex flex-col gap-2.5 overflow-hidden">
+        <div
+          className={`grid flex-1 min-h-0 overflow-hidden ${isDense ? 'gap-1.5' : 'gap-2'}`}
+          style={{
+            gridTemplateRows: `repeat(${Math.max(1, ranked.length)}, minmax(0, 1fr))`,
+          }}
+        >
           {ranked.map((team) => {
             const isTurn = team.id === activeTeamId;
 
             return (
               <div
                 key={team.id}
-                className={`relative flex h-[76px] items-center justify-between rounded-2xl border-2 px-5 transition-all ${
+                className={`relative flex min-h-0 min-w-0 items-center justify-between gap-3 overflow-hidden rounded-2xl border-2 px-4 py-1 transition-all ${
                   isTurn
                     ? 'border-[var(--p-accent-ink)] bg-[var(--p-accent-soft)] text-[var(--p-text)] shadow-sm'
                     : 'border-[var(--p-line)] bg-[var(--p-panel-2)] text-[var(--p-text)]'
@@ -56,34 +64,55 @@ export const TeamBand: React.FC<TeamBandProps> = ({
                 }}
               >
                 {/* Rank & Name */}
-                <div className="flex items-center gap-4 min-w-0">
-                  <span className="font-projector text-[26px] font-black tabular-numbers text-[var(--p-text-2)]">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span
+                    className={`w-[44px] shrink-0 font-projector font-black tabular-numbers text-[var(--p-text-2)] ${
+                      isDense ? 'text-[20px]' : 'text-[24px]'
+                    }`}
+                  >
                     #{team.rank}
                   </span>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-projector text-[28px] font-black truncate text-[var(--p-text)] max-w-[280px]">
-                      {team.name}
-                    </span>
+
+                  <div className="flex min-w-0 flex-1 items-center gap-2">
+                    <div className="min-w-0 flex-1">
+                      <FitText
+                        max={isDense ? 24 : 28}
+                        min={14}
+                        className="w-full font-projector font-black text-[var(--p-text)]"
+                        title={team.name}
+                      >
+                        {team.name}
+                      </FitText>
+                    </div>
                     {isTurn && (
-                      <span className="flex items-center gap-1 font-projector text-[18px] font-black uppercase text-[var(--p-accent-ink)]">
-                        <Flame className="h-3.5 w-3.5" /> EN TURNO
+                      <span className="flex shrink-0 items-center gap-1 rounded-full bg-[var(--p-accent)] px-2.5 py-0.5 font-projector text-[13px] font-black uppercase text-[var(--p-on-accent)]">
+                        <Flame className="h-3.5 w-3.5" />
+                        Turno
                       </span>
                     )}
                   </div>
                 </div>
 
                 {/* Score */}
-                <div className="flex items-baseline gap-2 shrink-0">
+                <div className="flex items-baseline gap-1.5 shrink-0">
                   {showScores ? (
                     <>
                       <AnimatedScore
                         score={team.score}
-                        className="font-projector text-[48px] font-black leading-none text-[var(--p-text)]"
+                        className={`font-projector font-black leading-none text-[var(--p-text)] ${
+                          isDense ? 'text-[30px]' : 'text-[40px]'
+                        }`}
                       />
-                      <span className="font-projector text-[20px] font-bold text-[var(--p-text-2)]">PTS</span>
+                      <span
+                        className={`font-projector font-bold text-[var(--p-text-2)] ${
+                          isDense ? 'text-[14px]' : 'text-[18px]'
+                        }`}
+                      >
+                        PTS
+                      </span>
                     </>
                   ) : (
-                    <span className="font-projector text-[24px] font-bold text-[var(--p-text-3)]">---</span>
+                    <span className="font-projector text-[22px] font-bold text-[var(--p-text-3)]">---</span>
                   )}
                 </div>
               </div>
@@ -124,19 +153,23 @@ export const TeamBand: React.FC<TeamBandProps> = ({
               }}
             />
 
-            {/* Header: Rank + Name + Turn indicator */}
-            <div className="flex items-center justify-between gap-2 pt-1.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="font-projector text-[22px] font-bold tracking-wider text-[var(--p-text-2)]">
+            {/* Header: Rank + Name (FitText 36->18) + Turn indicator */}
+            <div className="flex items-center justify-between gap-2 pt-1.5 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="font-projector text-[22px] font-bold tracking-wider text-[var(--p-text-2)] shrink-0">
                   {rankInfo?.rank ? `${rankInfo.rank}º` : 'Equipo'}
                 </span>
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--p-text-3)]" />
-                <span
-                  className="font-projector text-[28px] font-black text-[var(--p-text)] truncate max-w-[200px]"
-                  title={team.name}
-                >
-                  {team.name}
-                </span>
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--p-text-3)] shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <FitText
+                    max={36}
+                    min={18}
+                    className="w-full font-projector font-black text-[var(--p-text)]"
+                    title={team.name}
+                  >
+                    {team.name}
+                  </FitText>
+                </div>
               </div>
 
               {isTurn && (

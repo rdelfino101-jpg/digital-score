@@ -7,6 +7,8 @@ import { TimerBar } from './common/TimerBar';
 import { TurnPill } from './common/TurnPill';
 import { TeamBand } from './common/TeamBand';
 import { ScaleToFit } from './common/ScaleToFit';
+import { BrandMark } from './common/BrandMark';
+import { useProjectorBrand } from './common/brandContext';
 
 import { BibleBookArena } from './games/BibleBookArena';
 import { WhoSaidItArena } from './games/WhoSaidItArena';
@@ -25,13 +27,16 @@ interface GameStageDisplayProps {
 
 export const GameStageDisplay: React.FC<GameStageDisplayProps> = ({ state }) => {
   const { teams, turn, gameStage, timer, hudToggles, buzzer } = state;
+  const brand = useProjectorBrand();
   const { activeGameId } = gameStage;
   const activeTeam = teams.find((t) => t.id === turn.activeTeamId);
   const isLargeTeamCount = teams.length >= 5;
   const isSingleTeamGame = activeGameId === 'millionaire_show' || activeGameId === 'deal_or_nodeal';
+  const showSideStandings = !isSingleTeamGame && isLargeTeamCount;
 
   const isTimerWarning = timer.mode === 'countdown' && timer.secondsRemaining <= 10 && timer.secondsRemaining > 0;
   const isTimerFinished = timer.mode === 'countdown' && timer.secondsRemaining === 0 && !timer.isRunning;
+  const showTimerBar = hudToggles.showTimer && timer.mode === 'countdown' && timer.initialSeconds > 0;
 
   // Header Right Slot: TurnPill + Steal badge + ProjectorClock + Buzzer Open Badge + Single Team Chip
   const headerRightSlot = (
@@ -77,59 +82,86 @@ export const GameStageDisplay: React.FC<GameStageDisplayProps> = ({ state }) => 
     </div>
   );
 
+  const arenaNode = (
+    <ScaleToFit className="relative z-10 w-full">
+      <main className="flex flex-1 min-h-0 items-stretch justify-center w-full min-w-0">
+        {activeGameId === 'bible_book' && gameStage?.bibleBook && <BibleBookArena stage={gameStage.bibleBook} />}
+        {activeGameId === 'who_said_it' && gameStage?.whoSaidIt && <WhoSaidItArena stage={gameStage.whoSaidIt} />}
+        {activeGameId === 'hangman' && gameStage?.hangman && <HangmanArena stage={gameStage.hangman} />}
+        {activeGameId === 'charades' && gameStage?.charades && <CharadesArena stage={gameStage.charades} />}
+        {activeGameId === 'family_feud' && gameStage?.familyFeud && <FamilyFeudArena stage={gameStage.familyFeud} />}
+        {activeGameId === 'trivia_show' && gameStage?.triviaShow && <TriviaShowArena stage={gameStage.triviaShow} />}
+        {activeGameId === 'anagram_wheel' && gameStage?.anagramWheel && <AnagramWheelArena stage={gameStage.anagramWheel} />}
+        {activeGameId === 'music_karaoke' && gameStage?.musicKaraoke && <MusicKaraokeArena stage={gameStage.musicKaraoke} />}
+        {activeGameId === 'millionaire_show' && gameStage?.millionaireShow && <MillionaireArena stage={gameStage.millionaireShow} />}
+        {activeGameId === 'deal_or_nodeal' && gameStage?.dealOrNoDeal && <DealOrNoDealArena stage={gameStage.dealOrNoDeal} />}
+      </main>
+    </ScaleToFit>
+  );
+
   return (
-    <div className="flex h-full w-full flex-col justify-between select-none animate-projector-wipe">
+    <div className="flex h-full min-h-0 w-full flex-col justify-between overflow-hidden select-none animate-projector-wipe">
       {/* 1. PROJECTOR HEADER */}
       <ProjectorHeader
-        kicker="Game Show Studio"
+        leftSlot={<BrandMark brand={brand} size={84} />}
+        showLiveBadge={false}
+        kicker={`${brand.name} · Juego`}
         title={getGameNameLabel(activeGameId)}
         rightSlot={headerRightSlot}
       />
 
-      {/* 2. TIMER BAR */}
-      {hudToggles.showTimer && timer.mode === 'countdown' && timer.initialSeconds > 0 && (
-        <div className="pt-3">
-          <TimerBar
-            currentSeconds={timer.secondsRemaining}
-            totalSeconds={timer.initialSeconds}
-            isUrgent={isTimerWarning}
-          />
-        </div>
-      )}
+      {showSideStandings ? (
+        /* 5-10 TEAMS: Left column (TimerBar + Game Arena) | Right column (Full-height Standings Panel) */
+        <div className="flex flex-1 min-h-0 w-full items-stretch gap-8 pt-3 overflow-hidden">
+          <div className="flex flex-1 min-w-0 min-h-0 flex-col">
+            {showTimerBar && (
+              <div className="pb-3 shrink-0">
+                <TimerBar
+                  currentSeconds={timer.secondsRemaining}
+                  totalSeconds={timer.initialSeconds}
+                  isUrgent={isTimerWarning}
+                />
+              </div>
+            )}
+            <div className="flex flex-1 min-h-0 w-full items-center justify-center py-1">
+              {arenaNode}
+            </div>
+          </div>
 
-      {/* 3. MAIN ARENA LAYOUT */}
-      <div className={`my-auto flex flex-1 min-h-0 items-center justify-center py-3 w-full ${!isSingleTeamGame && isLargeTeamCount ? 'gap-8' : 'flex-col'}`}>
-        <ScaleToFit className="relative z-10 w-full">
-          <main className="flex flex-1 min-h-0 items-stretch justify-center w-full min-w-0">
-            {activeGameId === 'bible_book' && gameStage?.bibleBook && <BibleBookArena stage={gameStage.bibleBook} />}
-            {activeGameId === 'who_said_it' && gameStage?.whoSaidIt && <WhoSaidItArena stage={gameStage.whoSaidIt} />}
-            {activeGameId === 'hangman' && gameStage?.hangman && <HangmanArena stage={gameStage.hangman} />}
-            {activeGameId === 'charades' && gameStage?.charades && <CharadesArena stage={gameStage.charades} />}
-            {activeGameId === 'family_feud' && gameStage?.familyFeud && <FamilyFeudArena stage={gameStage.familyFeud} />}
-            {activeGameId === 'trivia_show' && gameStage?.triviaShow && <TriviaShowArena stage={gameStage.triviaShow} />}
-            {activeGameId === 'anagram_wheel' && gameStage?.anagramWheel && <AnagramWheelArena stage={gameStage.anagramWheel} />}
-            {activeGameId === 'music_karaoke' && gameStage?.musicKaraoke && <MusicKaraokeArena stage={gameStage.musicKaraoke} />}
-            {activeGameId === 'millionaire_show' && gameStage?.millionaireShow && <MillionaireArena stage={gameStage.millionaireShow} />}
-            {activeGameId === 'deal_or_nodeal' && gameStage?.dealOrNoDeal && <DealOrNoDealArena stage={gameStage.dealOrNoDeal} />}
-          </main>
-        </ScaleToFit>
-
-        {!isSingleTeamGame && isLargeTeamCount && (
           <TeamBand
             teams={teams}
             activeTeamId={turn.activeTeamId}
             showScores={hudToggles.showScores}
+            className="h-full min-h-0 shrink-0"
           />
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          {/* 2. TIMER BAR (Full width for 2-4 teams or single-team games) */}
+          {showTimerBar && (
+            <div className="pt-3 shrink-0">
+              <TimerBar
+                currentSeconds={timer.secondsRemaining}
+                totalSeconds={timer.initialSeconds}
+                isUrgent={isTimerWarning}
+              />
+            </div>
+          )}
 
-      {/* 4. BOTTOM TEAM BAND FOR 2-4 TEAMS (Suppressed in single-team games) */}
-      {!isSingleTeamGame && !isLargeTeamCount && (
-        <TeamBand
-          teams={teams}
-          activeTeamId={turn.activeTeamId}
-          showScores={hudToggles.showScores}
-        />
+          {/* 3. MAIN ARENA LAYOUT */}
+          <div className="my-auto flex flex-1 min-h-0 flex-col items-center justify-center py-3 w-full overflow-hidden">
+            {arenaNode}
+          </div>
+
+          {/* 4. BOTTOM TEAM BAND FOR 2-4 TEAMS (Suppressed in single-team games) */}
+          {!isSingleTeamGame && (
+            <TeamBand
+              teams={teams}
+              activeTeamId={turn.activeTeamId}
+              showScores={hudToggles.showScores}
+            />
+          )}
+        </>
       )}
     </div>
   );

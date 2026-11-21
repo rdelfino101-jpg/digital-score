@@ -344,24 +344,25 @@ export function rankStudioTeams(teams: StudioTeam[], autoSort: boolean = true): 
     copy.sort((a, b) => b.score - a.score);
   }
 
-  return copy.map((team, idx, arr) => {
-    let rank = idx + 1;
-    if (idx > 0 && team.score === arr[idx - 1].score) {
-      rank = (arr[idx - 1] as RankedTeam).rank || idx;
-    }
-    const isTied = arr.some((other) => other.id !== team.id && other.score === team.score);
+  const ranked: RankedTeam[] = [];
+  for (let idx = 0; idx < copy.length; idx++) {
+    const team = copy[idx];
+    const rank = idx > 0 && team.score === ranked[idx - 1].score ? ranked[idx - 1].rank : idx + 1;
+    const isTied = copy.some((other) => other.id !== team.id && other.score === team.score);
     let medal: 'gold' | 'silver' | 'bronze' | undefined;
     if (rank === 1) medal = 'gold';
     else if (rank === 2) medal = 'silver';
     else if (rank === 3) medal = 'bronze';
 
-    return {
+    ranked.push({
       ...team,
       rank,
       isTied,
       medal,
-    };
-  });
+    });
+  }
+
+  return ranked;
 }
 
 /**

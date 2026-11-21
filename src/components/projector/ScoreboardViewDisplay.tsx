@@ -314,7 +314,8 @@ export const BrandedLeaderboard: React.FC<{ state: MasterLiveState }> = ({ state
         {ranked.map((team) => {
           const isTurn = team.id === turn.activeTeamId;
           const isSoleLeader = team.rank === 1 && !team.isTied && team.score > 0;
-          const hasBadges = isSoleLeader || isTurn || team.isTied;
+          const showTiedBadge = team.isTied && team.score > 0;
+          const hasBadges = isSoleLeader || isTurn || showTiedBadge;
 
           return (
             <div
@@ -387,7 +388,7 @@ export const BrandedLeaderboard: React.FC<{ state: MasterLiveState }> = ({ state
                         </span>
                       )}
 
-                      {team.isTied && (
+                      {showTiedBadge && (
                         <span
                           className="rounded-full border px-3 py-0.5 font-projector text-[16px] font-bold leading-tight"
                           style={{

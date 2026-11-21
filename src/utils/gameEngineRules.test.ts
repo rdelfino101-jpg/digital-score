@@ -94,6 +94,29 @@ test('rankStudioTeams: accurately sorts by score and assigns gold, silver, bronz
   assert.equal(ranked[2].medal, 'bronze');
 });
 
+test('rankStudioTeams: assigns the same rank (e.g. 5, 5, 5, 5) to all tied teams', () => {
+  const teams: StudioTeam[] = [
+    { id: 't-1', name: 'E1', color: '#000', score: 400, setsWon: 0, fouls: 0 },
+    { id: 't-2', name: 'E2', color: '#000', score: 300, setsWon: 0, fouls: 0 },
+    { id: 't-3', name: 'E3', color: '#000', score: 200, setsWon: 0, fouls: 0 },
+    { id: 't-4', name: 'E4', color: '#000', score: 100, setsWon: 0, fouls: 0 },
+    { id: 't-5', name: 'E5', color: '#000', score: 0, setsWon: 0, fouls: 0 },
+    { id: 't-6', name: 'E6', color: '#000', score: 0, setsWon: 0, fouls: 0 },
+    { id: 't-7', name: 'E7', color: '#000', score: 0, setsWon: 0, fouls: 0 },
+    { id: 't-8', name: 'E8', color: '#000', score: 0, setsWon: 0, fouls: 0 },
+  ];
+
+  const ranked = rankStudioTeams(teams, true);
+  assert.deepEqual(
+    ranked.map((t) => t.rank),
+    [1, 2, 3, 4, 5, 5, 5, 5]
+  );
+  assert.deepEqual(
+    ranked.slice(4).map((t) => t.isTied),
+    [true, true, true, true]
+  );
+});
+
 test('processHangmanGuess: detects hits and strikes, triggers solved when all letters guessed', () => {
   const initial: HangmanGameState = {
     items: [{ id: '1', word: 'SOL', category: 'Test', pointsPerLetter: 10, pointsSolve: 50 }],
