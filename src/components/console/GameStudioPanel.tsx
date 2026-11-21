@@ -141,19 +141,20 @@ export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
   const isGameStageLive = state.viewMode === 'GAME_STAGE';
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-[#080d1a]">
-      {/* Game Selection Header with Live Stage Indicator */}
-      <div className="p-3 bg-slate-900/90 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-400" />
-          <h2 className="text-xs uppercase font-extrabold tracking-wider text-white">
-            Game Show Studio (10 Dinámicas Interactivas)
-          </h2>
+    <div className="@container flex-1 flex flex-col min-w-0 bg-[var(--c-bg)]">
+      {/* Encabezado del módulo */}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--c-line)] px-4 py-3">
+        <div className="min-w-0">
+          <h1 className="text-[18px] font-bold text-[var(--c-text)]">Juegos</h1>
+          <p className="truncate text-[13px] text-[var(--c-text-3)]">
+            {gameTabs.find((g) => g.id === activeGameId)?.title || 'Elige una dinámica'}
+          </p>
         </div>
 
-        {/* Live scene switcher button and Buzzer mode toggle */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           <button
+            role="switch"
+            aria-checked={Boolean(state.buzzer?.config?.useBuzzersInGameStage)}
             onClick={() => {
               onUpdateState((prev) => {
                 const currentUse = prev.buzzer?.config?.useBuzzersInGameStage ?? false;
@@ -171,61 +172,62 @@ export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
                 };
               });
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border transition-all ${
-              state.buzzer?.config?.useBuzzersInGameStage
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/60 shadow-sm shadow-amber-500/20'
-                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
-            }`}
-            title="Cuando está activado, el equipo que gana el pulsador toma automáticamente el turno del juego"
+            className="flex items-center gap-2 rounded-lg border border-[var(--c-line)] bg-[var(--c-panel)] px-3 py-2 text-[13px] font-semibold text-[var(--c-text-2)] transition-colors hover:text-[var(--c-text)]"
+            title="El equipo que gana el pulsador toma el turno del juego"
           >
-            <Zap className={`w-3.5 h-3.5 ${state.buzzer?.config?.useBuzzersInGameStage ? 'fill-current text-amber-400' : ''}`} />
-            <span>Pulsadores: {state.buzzer?.config?.useBuzzersInGameStage ? 'ACTIVADOS' : 'Desactivados'}</span>
+            <Zap className="h-4 w-4" />
+            Usar pulsadores
+            <span
+              className={`relative h-[18px] w-8 shrink-0 rounded-full transition-colors ${
+                state.buzzer?.config?.useBuzzersInGameStage ? 'bg-[var(--c-accent)]' : 'bg-[var(--c-line-strong)]'
+              }`}
+              aria-hidden
+            >
+              <span
+                className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white transition-all ${
+                  state.buzzer?.config?.useBuzzersInGameStage ? 'left-[16px]' : 'left-[2px]'
+                }`}
+              />
+            </span>
           </button>
 
           {isGameStageLive ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/20 text-red-400 border border-red-500/40 text-xs font-bold animate-pulse">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              <span>JUEGOS AL AIRE EN PANTALLA</span>
-            </div>
+            <span className="flex items-center gap-2 rounded-lg border border-red-500/60 bg-red-500/10 px-3.5 py-2 text-[13px] font-bold text-red-300">
+              <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
+              Al aire
+            </span>
           ) : (
             <button
               onClick={() => onSetViewMode('GAME_STAGE')}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-md shadow-amber-600/30 transition-all hover:scale-102"
+              className="flex items-center gap-2 rounded-lg bg-[var(--c-accent)] px-3.5 py-2 text-[13px] font-bold text-white transition-colors hover:bg-blue-500"
             >
-              <Tv className="w-3.5 h-3.5" />
-              <span>Poner Escenario de Juegos AL AIRE</span>
+              <Tv className="h-4 w-4" />
+              Poner al aire
             </button>
           )}
         </div>
       </div>
 
-      {/* Grid Navigation for 10 Games - 5x2 desktop grid with high-contrast icons */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 border-b border-slate-800 bg-slate-950/80 p-2.5 shrink-0">
+      {/* Selector de dinámica: nombres completos, sin cortes */}
+      <div className="grid shrink-0 grid-cols-2 gap-1.5 border-b border-[var(--c-line)] p-2.5 @2xl:grid-cols-3 @4xl:grid-cols-5">
         {gameTabs.map((tab) => {
           const Icon = tab.icon;
           const isSelected = tab.id === activeGameId;
-          const iconColor = tab.accent.split(' ')[1]; // semantic accent color
-
           return (
             <button
               key={tab.id}
               onClick={() => handleSelectGame(tab.id)}
-              className={`flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+              aria-pressed={isSelected}
+              className={`flex min-w-0 items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
                 isSelected
-                  ? 'bg-slate-800 text-white border-blue-500 shadow-md shadow-blue-500/25 ring-1 ring-blue-500/50 scale-[1.01]'
-                  : 'bg-slate-900/70 text-slate-200 border-slate-800 hover:bg-slate-800 hover:border-slate-700 hover:text-white'
+                  ? 'border-[var(--c-accent)] bg-[var(--c-accent-soft)]'
+                  : 'border-[var(--c-line)] bg-[var(--c-panel)] hover:border-[var(--c-line-strong)]'
               }`}
             >
-              <div className="flex items-center gap-2 min-w-0">
-                <Icon className={`w-4 h-4 shrink-0 ${iconColor}`} strokeWidth={2.2} />
-                <span className="truncate">{tab.title}</span>
-              </div>
-              <span
-                className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-black tracking-wider shrink-0 ${
-                  isSelected ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'
-                }`}
-              >
-                {tab.badge}
+              <Icon className={`h-4 w-4 shrink-0 ${isSelected ? 'text-[var(--c-accent)]' : 'text-[var(--c-text-3)]'}`} strokeWidth={2.2} />
+              <span className="min-w-0">
+                <span className="block text-[13px] font-semibold leading-tight text-[var(--c-text)]">{tab.title}</span>
+                <span className="block text-[11px] leading-tight text-[var(--c-text-3)]">{tab.badge}</span>
               </span>
             </button>
           );
@@ -233,7 +235,7 @@ export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
       </div>
 
       {/* Active Game Controller Workspace */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-5">
+      <div className="flex-1 overflow-y-auto p-4 xl:p-5">
         {activeGameId === 'bible_book' && (
           <BibleBookController
             state={state}

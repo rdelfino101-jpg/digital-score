@@ -6,16 +6,13 @@ import {
 } from '../../types/masterStudio';
 import { getNextTurnTeamId, getPrevTurnTeamId } from '../../utils/gameEngineRules';
 import {
-  Users,
   ChevronLeft,
   ChevronRight,
-  Flame,
   Plus,
   Trash2,
   Edit2,
   Check,
   RotateCcw,
-  Zap,
   Gift,
   Trophy,
   PanelLeftClose,
@@ -201,29 +198,33 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
     setConfirmResetOpen(false);
   };
 
-  // If collapsed on desktop
+  const ancho = 'w-[272px] 2xl:w-80';
+
   if (isCollapsed) {
     return (
-      <aside className="w-12 shrink-0 bg-[#0a0f1d] border-r border-slate-800 flex flex-col items-center py-3 select-none">
+      <aside className="flex w-12 shrink-0 select-none flex-col items-center border-r border-[var(--c-line)] bg-[var(--c-panel)] py-3">
         <button
           onClick={() => setIsCollapsed(false)}
-          className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-          title="Expandir barra de Equipos y Turnos"
+          className="rounded-lg p-2 text-[var(--c-text-2)] transition-colors hover:bg-[var(--c-panel-2)] hover:text-[var(--c-text)]"
+          title="Mostrar equipos y turnos"
+          aria-label="Mostrar equipos y turnos"
         >
-          <PanelLeftOpen className="w-5 h-5 text-blue-400" />
+          <PanelLeftOpen className="h-5 w-5" />
         </button>
-
-        <div className="mt-4 flex flex-col items-center gap-2">
+        <div className="mt-4 flex flex-col items-center gap-2.5">
           {teams.map((t) => (
-            <span
+            <button
               key={t.id}
               onClick={() => {
                 handleSelectTurn(t.id);
                 setIsCollapsed(false);
               }}
-              className="w-4 h-4 rounded-full cursor-pointer shadow ring-1 ring-white/20 hover:scale-125 transition-transform"
+              className={`h-4 w-4 rounded-full transition-transform hover:scale-125 ${
+                t.id === turn.activeTeamId ? 'ring-2 ring-amber-400 ring-offset-2 ring-offset-[var(--c-panel)]' : ''
+              }`}
               style={{ backgroundColor: t.color }}
               title={`${t.name}: ${t.score} pts`}
+              aria-label={`${t.name}: ${t.score} puntos`}
             />
           ))}
         </div>
@@ -232,133 +233,88 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
   }
 
   return (
-    <aside className="w-80 shrink-0 bg-[#0a0f1d] border-r border-slate-800 flex flex-col h-full overflow-hidden select-none">
-      {/* 1. TOP FIXED SECTION: CONTROL DE TURNOS CARD */}
-      <div className="p-3 bg-gradient-to-b from-slate-900 to-slate-950 border-b border-slate-800 shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5 text-xs font-black text-amber-400 uppercase tracking-wider">
-            <Zap className="w-4 h-4 fill-amber-400" />
-            <span>Control de Turnos</span>
-          </div>
-
-          <div className="flex items-center gap-1">
-            {/* Steal Mode Toggle */}
-            <button
-              onClick={handleToggleSteal}
-              className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-black uppercase transition-all ${
-                turn.stealMode
-                  ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/30 animate-pulse'
-                  : 'bg-slate-800 text-slate-200 hover:text-white'
-              }`}
-              title="Permite que otros equipos roben los puntos tras un error"
-            >
-              <Flame className="w-3.5 h-3.5 text-amber-400" strokeWidth={2.2} />
-              <span>Robo {turn.stealMode ? 'ON' : 'OFF'}</span>
-            </button>
-
-            {/* Collapse sidebar button */}
-            <button
-              onClick={() => setIsCollapsed(true)}
-              className="p-1 text-slate-300 hover:text-white hover:bg-slate-800 rounded transition-colors"
-              title="Colapsar barra lateral"
-            >
-              <PanelLeftClose className="w-4 h-4" strokeWidth={2.2} />
-            </button>
-          </div>
+    <aside className={`${ancho} flex h-full shrink-0 select-none flex-col overflow-hidden border-r border-[var(--c-line)] bg-[var(--c-panel)]`}>
+      {/* Turno */}
+      <div className="shrink-0 border-b border-[var(--c-line)] p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-[12px] font-bold text-[var(--c-text-2)]">Turno</h2>
+          <button
+            onClick={() => setIsCollapsed(true)}
+            className="rounded-md p-1 text-[var(--c-text-3)] transition-colors hover:bg-[var(--c-panel-2)] hover:text-[var(--c-text)]"
+            title="Ocultar columna de equipos"
+            aria-label="Ocultar columna de equipos"
+          >
+            <PanelLeftClose className="h-4 w-4" strokeWidth={2.2} />
+          </button>
         </div>
 
-        {/* Active Team Display Card */}
         {activeTeam && (
-          <div
-            className="p-2.5 rounded-xl border-2 transition-all shadow-md flex items-center justify-between"
-            style={{
-              borderColor: activeTeam.color,
-              backgroundColor: `${activeTeam.color}15`,
-            }}
-          >
-            <div className="flex items-center gap-2 min-w-0">
-              <span
-                className="w-3.5 h-3.5 rounded-full shrink-0 shadow ring-1 ring-white/30"
-                style={{ backgroundColor: activeTeam.color }}
-              />
+          <div className="relative overflow-hidden rounded-xl border border-amber-500/50 bg-amber-500/10 px-3 py-2.5">
+            <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: activeTeam.color }} aria-hidden />
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">
-                  En Turno Ahora:
-                </span>
-                <span className="font-black text-sm text-white truncate block">
-                  {activeTeam.name}
-                </span>
+                <p className="text-[12px] font-semibold text-amber-300">En turno</p>
+                <p className="line-clamp-2 text-[15px] font-bold leading-tight text-[var(--c-text)]">{activeTeam.name}</p>
               </div>
-            </div>
-
-            <div className="text-right shrink-0">
-              <span className="text-xl font-black font-mono text-white leading-none">
-                {activeTeam.score}
-              </span>
-              <span className="text-[9px] block text-slate-400 font-bold uppercase">pts</span>
+              <p className="shrink-0 font-mono text-[24px] font-black leading-none text-[var(--c-text)]">{activeTeam.score}</p>
             </div>
           </div>
         )}
 
-        {/* Ergonomic Turn Navigation Buttons */}
-        <div className="grid grid-cols-2 gap-1.5 mt-2">
+        <div className="mt-2 grid grid-cols-2 gap-1.5">
           <button
             onClick={handlePrevTurn}
-            className="flex items-center justify-center gap-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-bold transition-colors"
+            className="flex items-center justify-center gap-1 rounded-lg border border-[var(--c-line)] bg-[var(--c-panel-2)] py-2 text-[13px] font-semibold text-[var(--c-text)] transition-colors hover:border-[var(--c-line-strong)]"
           >
-            <ChevronLeft className="w-3.5 h-3.5" />
-            <span>&lt;&lt; Anterior</span>
+            <ChevronLeft className="h-4 w-4" />
+            Anterior
           </button>
           <button
             onClick={handleNextTurn}
-            className="flex items-center justify-center gap-1 py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-black shadow-md shadow-blue-600/30 transition-all active:scale-98"
+            className="flex items-center justify-center gap-1 rounded-lg bg-[var(--c-accent)] py-2 text-[13px] font-bold text-white transition-colors hover:bg-blue-500"
           >
-            <span>Siguiente &gt;&gt;</span>
-            <ChevronRight className="w-3.5 h-3.5" />
+            Siguiente
+            <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Auto advance toggle */}
-        <div className="flex items-center justify-between mt-2 pt-1.5 border-t border-slate-800/80 text-[10px] text-slate-400 font-medium">
-          <span>Pasar turno al sumar puntos:</span>
-          <button
+        <div className="mt-2.5 space-y-1.5">
+          <Interruptor
+            activo={turn.stealMode}
+            onClick={handleToggleSteal}
+            etiqueta="Robo de puntos"
+            ayuda="Tras un error, otro equipo puede robar los puntos"
+          />
+          <Interruptor
+            activo={turn.autoAdvanceOnScore}
             onClick={handleToggleAutoAdvance}
-            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-colors ${
-              turn.autoAdvanceOnScore
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-800 text-slate-400'
-            }`}
-          >
-            {turn.autoAdvanceOnScore ? 'Sí' : 'No'}
-          </button>
+            etiqueta="Pasar turno al sumar puntos"
+          />
         </div>
       </div>
 
-      {/* 2. SUB-TABS: Equipos vs Historial Ganadores (Útil si está en sorteos) */}
-      <div className="px-3 py-1.5 bg-slate-900/80 border-b border-slate-800 flex items-center justify-between text-xs font-bold shrink-0">
+      {/* Encabezado de la lista */}
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--c-line)] px-3 py-2">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setActiveTab('teams')}
-            className={`px-2 py-1 rounded-lg text-xs transition-colors ${
-              activeTab === 'teams'
-                ? 'bg-blue-600/30 text-blue-300 font-bold'
-                : 'text-slate-400 hover:text-white'
+            className={`whitespace-nowrap rounded-md px-2 py-1 text-[13px] transition-colors ${
+              activeTab === 'teams' ? 'bg-[var(--c-panel-2)] font-bold text-[var(--c-text)]' : 'font-semibold text-[var(--c-text-3)] hover:text-[var(--c-text)]'
             }`}
           >
             Equipos ({teams.length})
           </button>
-
           {isRaffleModule && (
             <button
               onClick={() => setActiveTab('raffle_winners')}
-              className={`px-2 py-1 rounded-lg text-xs transition-colors flex items-center gap-1 ${
+              className={`flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-1 text-[13px] transition-colors ${
                 activeTab === 'raffle_winners'
-                  ? 'bg-amber-600/30 text-amber-300 font-bold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[var(--c-panel-2)] font-bold text-[var(--c-text)]'
+                  : 'font-semibold text-[var(--c-text-3)] hover:text-[var(--c-text)]'
               }`}
             >
-              <Trophy className="w-3 h-3" />
-              <span>Ganadores ({raffleWinners.length})</span>
+              <Trophy className="h-3.5 w-3.5" />
+              Ganadores ({raffleWinners.length})
             </button>
           )}
         </div>
@@ -367,46 +323,47 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
           <div className="flex items-center gap-1">
             <button
               onClick={handleRequestResetScores}
-              className="p-1 text-slate-400 hover:text-amber-400 transition-colors"
-              title="Reiniciar todos los puntajes a 0"
+              className="rounded-md p-1.5 text-[var(--c-text-3)] transition-colors hover:bg-[var(--c-panel-2)] hover:text-[var(--c-text)]"
+              title="Poner todos los puntajes en 0"
+              aria-label="Poner todos los puntajes en 0"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="h-4 w-4" />
             </button>
             <button
               onClick={() => setIsAddingTeam(!isAddingTeam)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 text-[11px] font-bold transition-colors"
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-[13px] font-semibold text-[var(--c-accent)] transition-colors hover:bg-[var(--c-accent-soft)]"
+              title="Agregar equipo"
+              aria-label="Agregar equipo"
             >
-              <Plus className="w-3 h-3" />
-              <span>Equipo</span>
+              <Plus className="h-4 w-4" />
+              {!isRaffleModule && 'Agregar'}
             </button>
           </div>
         )}
       </div>
 
-      {/* Add Team Inline Form */}
       {isAddingTeam && activeTab === 'teams' && (
-        <div className="p-2.5 bg-slate-900 border-b border-slate-800 flex items-center gap-1.5 shrink-0">
+        <div className="flex shrink-0 items-center gap-1.5 border-b border-[var(--c-line)] p-2.5">
           <input
             type="text"
             placeholder="Nombre del nuevo equipo..."
             value={newTeamName}
             onChange={(e) => setNewTeamName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddNewTeam()}
-            className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
+            className="min-w-0 flex-1 rounded-lg border border-[var(--c-line-strong)] bg-[var(--c-bg)] px-2.5 py-1.5 text-[13px] text-[var(--c-text)] focus:border-[var(--c-accent)] focus:outline-none"
             autoFocus
           />
           <button
             onClick={handleAddNewTeam}
-            className="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold"
+            className="rounded-lg bg-[var(--c-accent)] px-3 py-1.5 text-[13px] font-bold text-white hover:bg-blue-500"
           >
             Crear
           </button>
         </div>
       )}
 
-      {/* 3. SCROLLABLE MIDDLE: ULTRA COMPACT TEAM CARDS */}
       {activeTab === 'teams' ? (
-        <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
+        <div className="flex-1 space-y-2 overflow-y-auto p-2.5">
           {teams.map((team) => {
             const isTurnActive = team.id === turn.activeTeamId;
             const isEditing = editingTeamId === team.id;
@@ -414,158 +371,119 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
             return (
               <div
                 key={team.id}
-                className={`rounded-xl border transition-all p-2 ${
-                  isTurnActive
-                    ? 'bg-slate-900/90 border-blue-500 shadow-md ring-1 ring-blue-500/40'
-                    : 'bg-slate-900/50 border-slate-800/90 hover:border-slate-700'
+                className={`group relative overflow-hidden rounded-xl border p-2.5 transition-colors ${
+                  isTurnActive ? 'border-amber-500/50 bg-[var(--c-panel-2)]' : 'border-[var(--c-line)] bg-[var(--c-panel-2)]/60'
                 }`}
               >
-                {/* Row 1: Dot + Name + Turn button + Score */}
-                <div className="flex items-center justify-between gap-1 mb-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                    <label className="cursor-pointer relative shrink-0">
-                      <span
-                        className="w-3.5 h-3.5 rounded-full block border border-white/30 shadow-sm"
-                        style={{ backgroundColor: team.color }}
-                      />
+                <span className="absolute inset-y-0 left-0 w-1" style={{ backgroundColor: team.color }} aria-hidden />
+
+                {/* Nombre y puntaje */}
+                <div className="mb-2 flex items-start justify-between gap-2 pl-1">
+                  <div className="flex min-w-0 flex-1 items-start gap-2">
+                    <label className="relative mt-[3px] shrink-0 cursor-pointer" title="Cambiar color del equipo">
+                      <span className="block h-3.5 w-3.5 rounded-full border border-white/25" style={{ backgroundColor: team.color }} />
                       <input
                         type="color"
                         value={team.color}
                         onChange={(e) => handleColorChange(team, e.target.value)}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-3.5 h-3.5"
-                        title="Cambiar color del equipo"
+                        className="absolute inset-0 h-3.5 w-3.5 cursor-pointer opacity-0"
+                        aria-label={`Color de ${team.name}`}
                       />
                     </label>
 
                     {isEditing ? (
-                      <div className="flex items-center gap-1 flex-1">
+                      <div className="flex min-w-0 flex-1 items-center gap-1">
                         <input
                           type="text"
                           value={tempName}
                           onChange={(e) => setTempName(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(team)}
-                          className="bg-slate-950 border border-blue-500 rounded px-1.5 py-0.5 text-xs text-white flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveEdit(team);
+                            if (e.key === 'Escape') setEditingTeamId(null);
+                          }}
+                          className="min-w-0 flex-1 rounded-md border border-[var(--c-accent)] bg-[var(--c-bg)] px-1.5 py-0.5 text-[13px] text-[var(--c-text)] focus:outline-none"
                           autoFocus
                         />
                         <button
                           onClick={() => handleSaveEdit(team)}
-                          className="p-1 text-emerald-400 hover:text-emerald-300"
+                          className="rounded-md p-1 text-emerald-400 hover:bg-[var(--c-panel)]"
+                          aria-label="Guardar nombre"
                         >
-                          <Check className="w-3.5 h-3.5" />
+                          <Check className="h-4 w-4" />
                         </button>
                       </div>
                     ) : (
-                      <span
-                        onClick={() => handleSelectTurn(team.id)}
-                        className="font-black text-xs text-slate-200 truncate cursor-pointer hover:text-white"
-                        title="Haz clic para asignarle el turno"
-                      >
-                        {team.name}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Actions & Score */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => handleSelectTurn(team.id)}
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider transition-colors ${
-                        isTurnActive
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-800 text-slate-400 hover:text-white'
-                      }`}
-                    >
-                      {isTurnActive ? '★ Turno' : 'Turno'}
-                    </button>
-
-                    <button
-                      onClick={() => handleStartEdit(team)}
-                      className="bg-slate-800 hover:bg-slate-700 text-slate-200 p-1.5 rounded transition-colors shadow-sm"
-                      title="Editar nombre"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-blue-300" strokeWidth={2.2} />
-                    </button>
-
-                    {teams.length > 2 && (
                       <button
-                        onClick={() => handleRequestDeleteTeam(team)}
-                        className="bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-red-400 p-1.5 rounded transition-colors shadow-sm cursor-pointer"
-                        title="Eliminar equipo"
+                        onClick={() => handleSelectTurn(team.id)}
+                        className="min-w-0 flex-1 text-left"
+                        title={isTurnActive ? 'Tiene el turno' : 'Dar el turno a este equipo'}
                       >
-                        <Trash2 className="w-3.5 h-3.5 text-slate-300 hover:text-red-400" strokeWidth={2.2} />
+                        <span className="line-clamp-2 text-[14px] font-bold leading-tight text-[var(--c-text)]">{team.name}</span>
+                        <span
+                          className={`mt-0.5 block text-[12px] font-semibold ${
+                            isTurnActive ? 'text-amber-300' : 'text-[var(--c-text-3)] group-hover:text-[var(--c-text-2)]'
+                          }`}
+                        >
+                          {isTurnActive ? 'En turno' : 'Dar turno'}
+                        </span>
                       </button>
                     )}
+                  </div>
 
-                    <span className="font-mono font-black text-base text-white ml-1">
-                      {team.score}
-                    </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="font-mono text-[22px] font-black leading-none text-[var(--c-text)]">{team.score}</span>
+                    {!isEditing && (
+                      <div className="flex items-center opacity-60 transition-opacity group-hover:opacity-100">
+                        <button
+                          onClick={() => handleStartEdit(team)}
+                          className="rounded-md p-1 text-[var(--c-text-2)] hover:bg-[var(--c-panel)] hover:text-[var(--c-text)]"
+                          title="Cambiar nombre"
+                          aria-label={`Cambiar nombre de ${team.name}`}
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        {teams.length > 2 && (
+                          <button
+                            onClick={() => handleRequestDeleteTeam(team)}
+                            className="rounded-md p-1 text-[var(--c-text-2)] hover:bg-[var(--c-panel)] hover:text-red-400"
+                            title="Eliminar equipo"
+                            aria-label={`Eliminar ${team.name}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Row 2: 5 Quick Points Adjustment Buttons */}
-                <div className="grid grid-cols-5 gap-1 mb-1.5">
-                  <button
-                    onClick={() => onQuickAdjustScore(team.id, -1)}
-                    className="py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-mono font-bold"
-                  >
-                    -1
-                  </button>
-                  <button
-                    onClick={() => onQuickAdjustScore(team.id, 1)}
-                    className="py-1 rounded bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white text-xs font-mono font-bold transition-colors"
-                  >
-                    +1
-                  </button>
-                  <button
-                    onClick={() => onQuickAdjustScore(team.id, 5)}
-                    className="py-1 rounded bg-blue-600/30 hover:bg-blue-600 text-blue-200 hover:text-white text-xs font-mono font-bold transition-colors"
-                  >
-                    +5
-                  </button>
-                  <button
-                    onClick={() => onQuickAdjustScore(team.id, 10)}
-                    className="py-1 rounded bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white text-xs font-mono font-bold transition-colors"
-                  >
-                    +10
-                  </button>
-                  <button
-                    onClick={() => onQuickAdjustScore(team.id, 50)}
-                    className="py-1 rounded bg-amber-600/30 hover:bg-amber-600 text-amber-200 hover:text-white text-xs font-mono font-bold transition-colors"
-                  >
-                    +50
-                  </button>
+                {/* Puntos rápidos */}
+                <div className="grid grid-cols-5 gap-1 pl-1">
+                  {[-1, 1, 5, 10, 50].map((delta) => (
+                    <button
+                      key={delta}
+                      onClick={() => onQuickAdjustScore(team.id, delta)}
+                      className={`rounded-md py-1.5 font-mono text-[13px] font-bold transition-colors active:scale-95 ${
+                        delta < 0
+                          ? 'bg-[var(--c-panel)] text-[var(--c-text-3)] hover:text-[var(--c-text)]'
+                          : 'bg-[var(--c-panel)] text-[var(--c-text)] hover:bg-[var(--c-accent)] hover:text-white'
+                      }`}
+                      aria-label={`${delta > 0 ? 'Sumar' : 'Restar'} ${Math.abs(delta)} a ${team.name}`}
+                    >
+                      {delta > 0 ? `+${delta}` : delta}
+                    </button>
+                  ))}
                 </div>
 
-                {/* Row 3: Discrete Footer for Sets, Fouls, Possession */}
-                <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-800/70">
-                  <div className="flex items-center gap-1">
-                    <span>Sets:</span>
-                    <strong className="text-purple-400 font-mono">{team.setsWon}</strong>
-                    <button
-                      onClick={() => handleAddSet(team, 1)}
-                      className="px-1 text-slate-400 hover:text-white bg-slate-800 rounded font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <span>Faltas:</span>
-                    <strong className="text-red-400 font-mono">{team.fouls}</strong>
-                    <button
-                      onClick={() => handleAddFoul(team, 1)}
-                      className="px-1 text-slate-400 hover:text-white bg-slate-800 rounded font-bold"
-                    >
-                      +
-                    </button>
-                  </div>
-
+                {/* Sets, faltas y saque */}
+                <div className="mt-2 flex items-center justify-between gap-2 pl-1 text-[12px] text-[var(--c-text-3)]">
+                  <Contador etiqueta="Sets" valor={team.setsWon} onSumar={() => handleAddSet(team, 1)} />
+                  <Contador etiqueta="Faltas" valor={team.fouls} onSumar={() => handleAddFoul(team, 1)} />
                   <button
                     onClick={() => handleTogglePossession(team)}
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase transition-colors ${
-                      team.hasPossession
-                        ? 'bg-amber-500 text-slate-950 font-black'
-                        : 'bg-slate-800 text-slate-500 hover:text-slate-300'
+                    aria-pressed={team.hasPossession}
+                    className={`rounded-md px-1.5 py-0.5 text-[12px] font-semibold transition-colors ${
+                      team.hasPossession ? 'bg-amber-500/20 text-amber-300' : 'hover:text-[var(--c-text)]'
                     }`}
                   >
                     {team.hasPossession ? '● Saque' : 'Saque'}
@@ -576,25 +494,24 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
           })}
         </div>
       ) : (
-        /* Sorteos Winners View in the left sidebar */
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 space-y-2 overflow-y-auto p-3">
           {raffleWinners.length === 0 ? (
-            <div className="text-center py-8 text-xs text-slate-500">
-              <Gift className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-              <p>No hay ganadores registrados aún.</p>
+            <div className="py-8 text-center text-[13px] text-[var(--c-text-3)]">
+              <Gift className="mx-auto mb-2 h-8 w-8 opacity-60" />
+              <p>Todavía no hay ganadores.</p>
             </div>
           ) : (
             raffleWinners.map((w, idx) => (
               <div
                 key={w.id || idx}
-                className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-2 shadow-sm"
+                className="flex items-center justify-between gap-2 rounded-xl border border-[var(--c-line)] bg-[var(--c-panel-2)] p-2.5"
               >
                 <div className="min-w-0">
-                  <div className="font-bold text-xs text-white truncate">{w.name}</div>
-                  <div className="text-[10px] text-amber-400 truncate">{w.prize}</div>
+                  <div className="truncate text-[13px] font-bold text-[var(--c-text)]">{w.name}</div>
+                  <div className="truncate text-[12px] text-amber-300">{w.prize}</div>
                 </div>
                 {w.ticketNumber && (
-                  <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 shrink-0">
+                  <span className="shrink-0 rounded-md bg-[var(--c-panel)] px-1.5 py-0.5 font-mono text-[12px] font-bold text-[var(--c-text-2)]">
                     #{w.ticketNumber}
                   </span>
                 )}
@@ -604,12 +521,11 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
         </div>
       )}
 
-      {/* Confirmation Modal: Reset All Scores */}
       <ConfirmActionModal
         isOpen={confirmResetOpen}
-        title="¿Reiniciar Todos los Puntajes a 0?"
-        message="Esta acción pondrá en 0 los puntos, sets y faltas acumuladas de todos los equipos del evento. Puedes usar 'Deshacer' (Ctrl+Z) si necesitas recuperarlos."
-        confirmText="Sí, Reiniciar a 0"
+        title="¿Poner todos los puntajes en 0?"
+        message="Se pondrán en 0 los puntos, sets y faltas de todos los equipos. Si te equivocas, usa Deshacer (Ctrl+Z)."
+        confirmText="Sí, poner en 0"
         cancelText="Cancelar"
         severity="warning"
         iconType="reset"
@@ -617,12 +533,11 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
         onClose={() => setConfirmResetOpen(false)}
       />
 
-      {/* Confirmation Modal: Delete Team */}
       <ConfirmActionModal
         isOpen={!!teamToDelete}
-        title={`¿Eliminar al equipo "${teamToDelete?.name}"?`}
-        message="El equipo será removido de la tabla y del orden de turnos de la competencia."
-        confirmText="Sí, Eliminar Equipo"
+        title={`¿Eliminar a "${teamToDelete?.name}"?`}
+        message="El equipo sale de la tabla y del orden de turnos."
+        confirmText="Sí, eliminar"
         cancelText="Cancelar"
         severity="danger"
         iconType="trash"
@@ -632,3 +547,42 @@ export const TeamManagerSidebar: React.FC<TeamManagerSidebarProps> = ({
     </aside>
   );
 };
+
+const Interruptor: React.FC<{ activo: boolean; onClick: () => void; etiqueta: string; ayuda?: string }> = ({
+  activo,
+  onClick,
+  etiqueta,
+  ayuda,
+}) => (
+  <button
+    role="switch"
+    aria-checked={activo}
+    onClick={onClick}
+    title={ayuda}
+    className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-0.5 text-left text-[12px] text-[var(--c-text-2)] hover:text-[var(--c-text)]"
+  >
+    <span>{etiqueta}</span>
+    <span
+      className={`relative h-[18px] w-8 shrink-0 rounded-full transition-colors ${activo ? 'bg-[var(--c-accent)]' : 'bg-[var(--c-line-strong)]'}`}
+      aria-hidden
+    >
+      <span
+        className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white transition-all ${activo ? 'left-[16px]' : 'left-[2px]'}`}
+      />
+    </span>
+  </button>
+);
+
+const Contador: React.FC<{ etiqueta: string; valor: number; onSumar: () => void }> = ({ etiqueta, valor, onSumar }) => (
+  <span className="flex items-center gap-1">
+    {etiqueta}
+    <strong className="font-mono text-[var(--c-text)]">{valor}</strong>
+    <button
+      onClick={onSumar}
+      className="rounded px-1 font-bold text-[var(--c-text-2)] hover:bg-[var(--c-panel)] hover:text-[var(--c-text)]"
+      aria-label={`Sumar ${etiqueta.toLowerCase()}`}
+    >
+      +
+    </button>
+  </span>
+);

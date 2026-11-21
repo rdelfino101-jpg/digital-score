@@ -1285,7 +1285,7 @@ function DirectorOperatorStudio() {
   }, [roomCode]);
 
   return (
-    <div className="flex h-screen w-screen flex-col bg-[#070b14] text-slate-100 font-sans selection:bg-blue-600 selection:text-white overflow-hidden">
+    <div className="consola flex h-screen w-screen flex-col font-sans selection:bg-blue-600 selection:text-white overflow-hidden">
       {/* 1. Header Único Compacto (1 Sola Fila Superior de 64px) */}
       <DirectorHeader
         activeTab={activeTab}
@@ -1348,7 +1348,7 @@ function DirectorOperatorStudio() {
         />
 
         {/* COLUMNA CENTRAL: ÁREA DE TRABAJO DEL MÓDULO ACTIVO (flex-1 con scroll interno) */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#070b14]">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[var(--c-bg)]">
           {activeTab === 'scoreboard' ? (
             <ScoreboardConfigController
               scoreboard={masterState.scoreboard}
@@ -1404,20 +1404,20 @@ function DirectorOperatorStudio() {
 
         {/* COLUMNA DERECHA: MASTER BROADCAST, MONITOR PIP INTEGRADO Y SOUNDPAD FX (w-80 Fijo) */}
         {isSplitView ? (
-          <div className="flex flex-col w-[540px] shrink-0 border-l border-slate-800 bg-black">
-            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-bold text-slate-300 shrink-0">
+          <div className="flex flex-col w-[440px] 2xl:w-[540px] shrink-0 border-l border-[var(--c-line)] bg-black">
+            <div className="flex items-center justify-between border-b border-[var(--c-line)] bg-[var(--c-panel)] px-3 py-2 text-[13px] font-semibold text-[var(--c-text-2)] shrink-0">
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                <span>SALIDA DE PROYECCIÓN EN VIVO (VISTA DIVIDIDA)</span>
+                <span className="h-2 w-2 rounded-full bg-red-500" />
+                <span>Proyector en vivo</span>
               </div>
               <button
                 onClick={() => setIsSplitView(false)}
-                className="text-xs text-slate-400 hover:text-white"
+                className="rounded-md px-2 py-0.5 text-[13px] text-[var(--c-text-2)] hover:bg-[var(--c-panel-2)] hover:text-[var(--c-text)]"
               >
-                Cerrar Dividida
+                Cerrar vista dividida
               </button>
             </div>
-            <div className="relative flex-1 overflow-hidden">
+            <div className="relative flex-1 overflow-hidden" data-proyector>
               <MasterProjectorView masterState={masterState} isEmbeddedPreview={true} />
             </div>
           </div>

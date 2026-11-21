@@ -564,14 +564,14 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-6 text-white select-none">
+    <div className="@container flex flex-1 flex-col gap-6 overflow-y-auto p-4 text-white select-none xl:p-5">
       {/* 
         TOP ACTION BAR:
         - Mode buttons
         - Sorteo counter ("SORTEO N DE LA NOCHE")
         - Buttons: QR scene, Winner screen, Excel exports
       */}
-      <div className="p-5 rounded-3xl bg-[#15173A] border border-[#2A2D5C] flex flex-wrap items-center justify-between gap-4 shadow-xl">
+      <div className="p-5 rounded-3xl bg-[var(--c-panel)] border border-[var(--c-line)] flex flex-wrap items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-2xl bg-[#FFC53D] text-slate-950 font-black shadow-lg">
             <Trophy className="w-6 h-6" />
@@ -582,7 +582,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                 CENTRO DE SORTEOS
               </span>
               <span className="text-slate-500">•</span>
-              <span className="px-2 py-0.5 rounded bg-[#1C1F47] text-white text-[12px] font-bold">
+              <span className="px-2 py-0.5 rounded bg-[var(--c-panel-2)] text-white text-[12px] font-bold">
                 Sala {roomCode}
               </span>
             </div>
@@ -593,7 +593,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
               <button
                 onClick={handleIncrementDrawCount}
                 title="Avanzar número de sorteo para el siguiente premio"
-                className="px-3 py-1 rounded-xl bg-[#1C1F47] hover:bg-[#2A2D5C] text-[#FFC53D] border border-[#FFC53D]/40 text-[13px] font-black transition-all cursor-pointer"
+                className="px-3 py-1 rounded-xl bg-[var(--c-panel-2)] hover:bg-[var(--c-line)] text-[#FFC53D] border border-[#FFC53D]/40 text-[13px] font-black transition-all cursor-pointer"
               >
                 + Siguiente Sorteo
               </button>
@@ -609,7 +609,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
             className={`px-4 py-2.5 rounded-xl font-black text-[14px] flex items-center gap-2 border transition-all cursor-pointer ${
               raffle.showWinnerCelebrationScreen
                 ? 'bg-[#3A2A05] border-[#FFC53D] text-[#FFC53D] shadow-lg animate-pulse'
-                : 'bg-[#1C1F47] border-[#2A2D5C] text-white hover:border-[#FFC53D]'
+                : 'bg-[var(--c-panel-2)] border-[var(--c-line)] text-white hover:border-[#FFC53D]'
             }`}
           >
             <Trophy className="w-4 h-4 text-[#FFC53D]" />
@@ -622,7 +622,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
             className={`px-4 py-2.5 rounded-xl font-black text-[14px] flex items-center gap-2 border transition-all cursor-pointer ${
               raffle.showQrRegistrationScene
                 ? 'bg-[#0F5132] border-[#4ADE80] text-[#4ADE80] shadow-lg'
-                : 'bg-[#1C1F47] border-[#2A2D5C] text-white hover:border-[#4ADE80]'
+                : 'bg-[var(--c-panel-2)] border-[var(--c-line)] text-white hover:border-[#4ADE80]'
             }`}
           >
             <Tv className="w-4 h-4" />
@@ -645,7 +645,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
           {/* QR code modal button */}
           <button
             onClick={openQrModal}
-            className="px-4 py-2.5 rounded-xl bg-[#1C1F47] border border-[#2A2D5C] text-[#B8BCE6] hover:text-white hover:border-[#4B5299] font-bold text-[14px] flex items-center gap-2 transition-all cursor-pointer"
+            className="px-4 py-2.5 rounded-xl bg-[var(--c-panel-2)] border border-[var(--c-line)] text-[var(--c-text-2)] hover:text-white hover:border-[var(--c-line-strong)] font-bold text-[14px] flex items-center gap-2 transition-all cursor-pointer"
           >
             <Share2 className="w-4 h-4 text-[#FFC53D]" />
             <span>Ver QR</span>
@@ -681,13 +681,13 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
       )}
 
       {/* MODE SELECTOR (4 MODES) */}
-      <div className="grid grid-cols-4 gap-3 w-full">
+      <div className="grid grid-cols-2 gap-3 w-full @4xl:grid-cols-4">
         <button
           onClick={() => onUpdateState((prev) => ({ ...prev, raffle: { ...prev.raffle, mode: 'wheel' } }))}
           className={`p-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all cursor-pointer ${
             raffle.mode === 'wheel'
               ? 'bg-[#3A2A05] border-[#FFC53D] text-[#FFC53D] shadow-xl scale-[1.02]'
-              : 'bg-[#15173A] border-[#2A2D5C] text-[#B8BCE6] hover:border-[#4B5299]'
+              : 'bg-[var(--c-panel)] border-[var(--c-line)] text-[var(--c-text-2)] hover:border-[var(--c-line-strong)]'
           }`}
         >
           <RotateCcw className="w-7 h-7" />
@@ -700,7 +700,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
           className={`p-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all cursor-pointer ${
             raffle.mode === 'slot_machine'
               ? 'bg-[#3A2A05] border-[#FFC53D] text-[#FFC53D] shadow-xl scale-[1.02]'
-              : 'bg-[#15173A] border-[#2A2D5C] text-[#B8BCE6] hover:border-[#4B5299]'
+              : 'bg-[var(--c-panel)] border-[var(--c-line)] text-[var(--c-text-2)] hover:border-[var(--c-line-strong)]'
           }`}
         >
           <Flame className="w-7 h-7" />
@@ -713,7 +713,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
           className={`p-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all cursor-pointer ${
             raffle.mode === 'tombola_numbers'
               ? 'bg-[#3A2A05] border-[#FFC53D] text-[#FFC53D] shadow-xl scale-[1.02]'
-              : 'bg-[#15173A] border-[#2A2D5C] text-[#B8BCE6] hover:border-[#4B5299]'
+              : 'bg-[var(--c-panel)] border-[var(--c-line)] text-[var(--c-text-2)] hover:border-[var(--c-line-strong)]'
           }`}
         >
           <Dices className="w-7 h-7" />
@@ -726,7 +726,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
           className={`p-4 rounded-2xl border-2 flex flex-col items-center text-center gap-1.5 transition-all cursor-pointer ${
             raffle.mode === 'team_matcher'
               ? 'bg-[#3A2A05] border-[#FFC53D] text-[#FFC53D] shadow-xl scale-[1.02]'
-              : 'bg-[#15173A] border-[#2A2D5C] text-[#B8BCE6] hover:border-[#4B5299]'
+              : 'bg-[var(--c-panel)] border-[var(--c-line)] text-[var(--c-text-2)] hover:border-[var(--c-line-strong)]'
           }`}
         >
           <Swords className="w-7 h-7" />
@@ -736,11 +736,11 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
       </div>
 
       {/* ACTIVE MODE CONFIGURATION & SPIN CONTROLLER */}
-      <div className="p-6 rounded-3xl bg-[#15173A] border border-[#2A2D5C] shadow-2xl space-y-6">
+      <div className="p-6 rounded-3xl bg-[var(--c-panel)] border border-[var(--c-line)] shadow-2xl space-y-6">
         {/* Title and Prize input */}
         <div className="grid grid-cols-3 gap-4">
           <div className="col-span-2">
-            <label className="block text-[13px] font-black uppercase tracking-wider text-[#B8BCE6] mb-1.5">
+            <label className="block text-[13px] font-black uppercase tracking-wider text-[var(--c-text-2)] mb-1.5">
               Título del Sorteo / Premio a Entregar
             </label>
             <input
@@ -753,12 +753,12 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                 }))
               }
               placeholder="Ej. Gran Premio Sorpresa #1 • Canasta Familiar..."
-              className="w-full px-4 py-3 rounded-xl bg-[#0A0B1E] border border-[#2A2D5C] text-white font-bold text-[16px] focus:outline-none focus:border-[#FFC53D]"
+              className="w-full px-4 py-3 rounded-xl bg-[var(--c-bg)] border border-[var(--c-line)] text-white font-bold text-[16px] focus:outline-none focus:border-[#FFC53D]"
             />
           </div>
 
           <div>
-            <label className="block text-[13px] font-black uppercase tracking-wider text-[#B8BCE6] mb-1.5">
+            <label className="block text-[13px] font-black uppercase tracking-wider text-[var(--c-text-2)] mb-1.5">
               Regla de Selección
             </label>
             <div className="grid grid-cols-2 gap-2">
@@ -772,7 +772,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                 className={`py-3 rounded-xl font-bold text-[14px] border transition-all cursor-pointer ${
                   raffle.drawRule === 'direct_win'
                     ? 'bg-[#0F5132] border-[#4ADE80] text-white font-black'
-                    : 'bg-[#0A0B1E] border-[#2A2D5C] text-[#B8BCE6]'
+                    : 'bg-[var(--c-bg)] border-[var(--c-line)] text-[var(--c-text-2)]'
                 }`}
               >
                 Giro Directo
@@ -787,7 +787,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                 className={`py-3 rounded-xl font-bold text-[14px] border transition-all cursor-pointer ${
                   raffle.drawRule === 'elimination'
                     ? 'bg-[#3F1216] border-[#EF4444] text-white font-black'
-                    : 'bg-[#0A0B1E] border-[#2A2D5C] text-[#B8BCE6]'
+                    : 'bg-[var(--c-bg)] border-[var(--c-line)] text-[var(--c-text-2)]'
                 }`}
               >
                 Eliminación
@@ -798,7 +798,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
 
         {/* Mode Specific Settings: Combinador de Retos, Tómbola, or Torneo */}
         {raffle.mode === 'slot_machine' && (
-          <div className="p-4 rounded-2xl bg-[#0A0B1E] border border-[#2A2D5C] space-y-4">
+          <div className="p-4 rounded-2xl bg-[var(--c-bg)] border border-[var(--c-line)] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Flame className="w-5 h-5 text-[#FF8A1F]" />
@@ -809,13 +809,13 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowChallengeEditor(!showChallengeEditor)}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#1C1F47] hover:bg-[#2A2D5C] text-[#FFC53D] font-bold text-[13px] border border-[#FFC53D]/40 transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-[var(--c-panel-2)] hover:bg-[var(--c-line)] text-[#FFC53D] font-bold text-[13px] border border-[#FFC53D]/40 transition-all cursor-pointer"
                 >
                   {showChallengeEditor ? 'Ocultar Editor' : 'Editar Retos y Premios'}
                 </button>
                 <button
                   onClick={handleExportChallengesPrizesExcel}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#1C1F47] hover:bg-[#2A2D5C] text-white font-bold text-[13px] border border-[#2A2D5C] transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl bg-[var(--c-panel-2)] hover:bg-[var(--c-line)] text-white font-bold text-[13px] border border-[var(--c-line)] transition-all cursor-pointer"
                 >
                   Exportar a Excel
                 </button>
@@ -824,7 +824,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
 
             {/* Inline Editor for Challenges and Prizes */}
             {showChallengeEditor && (
-              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-[#2A2D5C]">
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-[var(--c-line)]">
                 {/* Column Retos */}
                 <div className="space-y-2">
                   <span className="text-[13px] font-black uppercase text-[#FF8A1F] block">
@@ -836,7 +836,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                       placeholder="Nuevo reto..."
                       value={newChallengeText}
                       onChange={(e) => setNewChallengeText(e.target.value)}
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-[#15173A] border border-[#2A2D5C] text-white text-[14px]"
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--c-panel)] border border-[var(--c-line)] text-white text-[14px]"
                     />
                     <button
                       onClick={() => {
@@ -857,7 +857,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                   </div>
                   <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
                     {challengesList.map((c, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded bg-[#15173A] text-[13px]">
+                      <div key={i} className="flex items-center justify-between p-2 rounded bg-[var(--c-panel)] text-[13px]">
                         <span className="truncate">{c}</span>
                         <button
                           onClick={() => {
@@ -889,7 +889,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                       placeholder="Nuevo premio..."
                       value={newPrizeText}
                       onChange={(e) => setNewPrizeText(e.target.value)}
-                      className="flex-1 px-3 py-1.5 rounded-lg bg-[#15173A] border border-[#2A2D5C] text-white text-[14px]"
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-[var(--c-panel)] border border-[var(--c-line)] text-white text-[14px]"
                     />
                     <button
                       onClick={() => {
@@ -910,7 +910,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                   </div>
                   <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
                     {prizesList.map((p, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded bg-[#15173A] text-[13px]">
+                      <div key={i} className="flex items-center justify-between p-2 rounded bg-[var(--c-panel)] text-[13px]">
                         <span className="truncate">{p}</span>
                         <button
                           onClick={() => {
@@ -937,7 +937,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
 
         {/* Emparejador & Torneos Bracket Management */}
         {raffle.mode === 'team_matcher' && (
-          <div className="p-4 rounded-2xl bg-[#0A0B1E] border border-[#2A2D5C] space-y-4">
+          <div className="p-4 rounded-2xl bg-[var(--c-bg)] border border-[var(--c-line)] space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Swords className="w-5 h-5 text-[#FFC53D]" />
@@ -954,7 +954,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                       raffle: { ...prev.raffle, matcherType: e.target.value as any },
                     }))
                   }
-                  className="px-3 py-1.5 rounded-xl bg-[#15173A] border border-[#2A2D5C] text-white font-bold text-[14px]"
+                  className="px-3 py-1.5 rounded-xl bg-[var(--c-panel)] border border-[var(--c-line)] text-white font-bold text-[14px]"
                 >
                   <option value="tournament_bracket">Llaves de Torneo (Cuartos, Semis, Final)</option>
                   <option value="duels_1v1">Duelos 1 vs 1</option>
@@ -970,7 +970,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                         raffle: { ...prev.raffle, matcherBracketSize: Number(e.target.value) as any },
                       }))
                     }
-                    className="px-3 py-1.5 rounded-xl bg-[#15173A] border border-[#2A2D5C] text-white font-bold text-[14px]"
+                    className="px-3 py-1.5 rounded-xl bg-[var(--c-panel)] border border-[var(--c-line)] text-white font-bold text-[14px]"
                   >
                     <option value={4}>Llave de 4 Equipos</option>
                     <option value={8}>Llave de 8 Equipos</option>
@@ -989,13 +989,13 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
 
             {/* Bracket Advancement Controller (Requirement 12) */}
             {raffle.matcherType === 'tournament_bracket' && raffle.lastMatcherResult?.bracket && (
-              <div className="pt-3 border-t border-[#2A2D5C] space-y-3">
+              <div className="pt-3 border-t border-[var(--c-line)] space-y-3">
                 <span className="text-[13px] font-black uppercase text-[#4ADE80] block">
                   Haz clic en el equipo ganador para avanzar a la siguiente ronda:
                 </span>
                 <div className="grid grid-cols-3 gap-3">
                   {raffle.lastMatcherResult.bracket.matches.map((match) => (
-                    <div key={match.id} className="p-3 rounded-xl bg-[#15173A] border border-[#2A2D5C] flex flex-col gap-1.5">
+                    <div key={match.id} className="p-3 rounded-xl bg-[var(--c-panel)] border border-[var(--c-line)] flex flex-col gap-1.5">
                       <span className="text-[11px] font-bold text-slate-500 uppercase">
                         Ronda {match.roundIndex + 1} • Partido {match.matchIndex + 1}
                       </span>
@@ -1005,7 +1005,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                         className={`px-3 py-1.5 rounded-lg text-left text-[14px] font-black transition-all cursor-pointer ${
                           match.winner === match.teamA
                             ? 'bg-[#0F5132] text-[#4ADE80] border border-[#4ADE80]'
-                            : 'bg-[#0A0B1E] text-white hover:bg-slate-800'
+                            : 'bg-[var(--c-bg)] text-white hover:bg-slate-800'
                         }`}
                       >
                         {match.teamA || '---'} {match.winner === match.teamA ? '✓' : ''}
@@ -1016,7 +1016,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                         className={`px-3 py-1.5 rounded-lg text-left text-[14px] font-black transition-all cursor-pointer ${
                           match.winner === match.teamB
                             ? 'bg-[#0F5132] text-[#4ADE80] border border-[#4ADE80]'
-                            : 'bg-[#0A0B1E] text-white hover:bg-slate-800'
+                            : 'bg-[var(--c-bg)] text-white hover:bg-slate-800'
                         }`}
                       >
                         {match.teamB || '---'} {match.winner === match.teamB ? '✓' : ''}
@@ -1053,8 +1053,8 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
       </div>
 
       {/* PARTICIPANTS MANAGEMENT TABLE & REMOVE CONTROL */}
-      <div className="p-6 rounded-3xl bg-[#15173A] border border-[#2A2D5C] shadow-2xl space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-[#2A2D5C]">
+      <div className="p-6 rounded-3xl bg-[var(--c-panel)] border border-[var(--c-line)] shadow-2xl space-y-5">
+        <div className="flex items-center justify-between pb-3 border-b border-[var(--c-line)]">
           <div className="flex items-center gap-3">
             <Users className="w-6 h-6 text-[#FFC53D]" />
             <h3 className="text-[20px] font-black text-white">
@@ -1076,7 +1076,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                   },
                 }));
               }}
-              className="px-3.5 py-1.5 rounded-xl bg-[#1C1F47] hover:bg-[#2A2D5C] text-[#B8BCE6] text-[13px] font-bold border border-[#2A2D5C] transition-all cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-[var(--c-panel-2)] hover:bg-[var(--c-line)] text-[var(--c-text-2)] text-[13px] font-bold border border-[var(--c-line)] transition-all cursor-pointer"
             >
               Reactivar Todos
             </button>
@@ -1103,14 +1103,14 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
             placeholder="Nombre y apellido..."
             value={newParticipantName}
             onChange={(e) => setNewParticipantName(e.target.value)}
-            className="flex-1 px-4 py-2.5 rounded-xl bg-[#0A0B1E] border border-[#2A2D5C] text-white text-[15px] font-semibold"
+            className="flex-1 px-4 py-2.5 rounded-xl bg-[var(--c-bg)] border border-[var(--c-line)] text-white text-[15px] font-semibold"
           />
           <input
             type="text"
             placeholder="Grupo / Célula (opcional)..."
             value={newParticipantGroup}
             onChange={(e) => setNewParticipantGroup(e.target.value)}
-            className="w-60 px-4 py-2.5 rounded-xl bg-[#0A0B1E] border border-[#2A2D5C] text-white text-[15px] font-semibold"
+            className="w-60 px-4 py-2.5 rounded-xl bg-[var(--c-bg)] border border-[var(--c-line)] text-white text-[15px] font-semibold"
           />
           <button
             onClick={handleAddSingle}
@@ -1132,12 +1132,12 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                 key={p.id}
                 className={`p-3 rounded-2xl border flex items-center justify-between gap-4 transition-all ${
                   p.eliminated
-                    ? 'bg-[#0A0B1E]/40 border-[#2A2D5C]/30 text-slate-500 opacity-60'
-                    : 'bg-[#0A0B1E] border-[#2A2D5C] text-white'
+                    ? 'bg-[var(--c-bg)]/40 border-[var(--c-line)]/30 text-slate-500 opacity-60'
+                    : 'bg-[var(--c-bg)] border-[var(--c-line)] text-white'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-10 h-8 rounded-lg bg-[#1C1F47] text-[#FFC53D] font-black text-[13px] flex items-center justify-center shrink-0">
+                  <span className="w-10 h-8 rounded-lg bg-[var(--c-panel-2)] text-[#FFC53D] font-black text-[13px] flex items-center justify-center shrink-0">
                     #{p.ticketNumber || '---'}
                   </span>
                   <div className="min-w-0">
@@ -1145,7 +1145,7 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
                       {p.name}
                     </span>
                     {p.groupOrCell && (
-                      <span className="text-[12px] text-[#B8BCE6] block truncate">
+                      <span className="text-[12px] text-[var(--c-text-2)] block truncate">
                         {p.groupOrCell}
                       </span>
                     )}
@@ -1197,8 +1197,8 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
       {/* QR MODAL */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-          <div className="w-full max-w-md p-6 rounded-3xl bg-[#15173A] border-4 border-[#FFC53D] shadow-2xl text-center space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-[#2A2D5C]">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-[var(--c-panel)] border-4 border-[#FFC53D] shadow-2xl text-center space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[var(--c-line)]">
               <span className="text-[18px] font-black text-white">QR de Inscripción para Celulares</span>
               <button
                 onClick={() => setShowQrModal(false)}
@@ -1212,12 +1212,12 @@ export const RaffleStudioController: React.FC<RaffleStudioControllerProps> = ({
               {qrModalDataUrl && <img src={qrModalDataUrl} alt="QR" className="w-64 h-64 mx-auto" />}
             </div>
 
-            <div className="p-3 rounded-xl bg-[#0A0B1E] border border-[#2A2D5C] text-center">
+            <div className="p-3 rounded-xl bg-[var(--c-bg)] border border-[var(--c-line)] text-center">
               <span className="text-[11px] text-slate-400 uppercase tracking-widest block">SALA</span>
               <span className="text-[32px] font-black text-[#FFC53D] leading-none">{roomCode}</span>
             </div>
 
-            <p className="text-[13px] text-[#B8BCE6]">
+            <p className="text-[13px] text-[var(--c-text-2)]">
               Apunta la cámara de los celulares al código QR para abrir el formulario oficial de inscripción.
             </p>
           </div>

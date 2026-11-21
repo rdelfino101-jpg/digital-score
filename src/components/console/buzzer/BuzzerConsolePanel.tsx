@@ -190,7 +190,7 @@ export const BuzzerConsolePanel: React.FC<BuzzerConsolePanelProps> = ({
   const secLeft = Math.max(0, (answerDeadline - now) / 1000).toFixed(1);
 
   return (
-    <div className="space-y-6">
+    <div className="@container flex-1 space-y-6 overflow-y-auto p-4 xl:p-5">
       {/* Top Banner & Main Action Controls */}
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-800">
@@ -473,7 +473,7 @@ export const BuzzerConsolePanel: React.FC<BuzzerConsolePanelProps> = ({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 @xl:grid-cols-2 @5xl:grid-cols-3 @7xl:grid-cols-4">
           {teams.map((team) => {
             const client = connectedClients[team.id];
             const isConnected = !!client?.connected;
@@ -493,27 +493,27 @@ export const BuzzerConsolePanel: React.FC<BuzzerConsolePanelProps> = ({
               >
                 <div>
                   {/* Team Header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
                       <div
                         className="w-7 h-7 rounded-lg flex items-center justify-center text-white font-black text-xs shadow"
                         style={{ backgroundColor: team.color }}
                       >
                         {team.name.charAt(0)}
                       </div>
-                      <span className="font-black text-sm text-white truncate max-w-[120px]">
+                      <span className="min-w-0 truncate font-black text-sm text-white" title={team.name}>
                         {team.name}
                       </span>
                     </div>
 
                     {/* Connection indicator */}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <span
                         className={`w-2.5 h-2.5 rounded-full ${
                           isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'
                         }`}
                       />
-                      <span className="text-[11px] font-bold text-slate-400">
+                      <span className="whitespace-nowrap text-[11px] font-bold text-slate-400">
                         {isConnected ? 'En Vivo' : 'Desconectado'}
                       </span>
                     </div>

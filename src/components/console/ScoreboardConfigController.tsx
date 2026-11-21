@@ -18,10 +18,10 @@ import {
   Eye,
   Sliders,
   Type,
-  Sparkles,
   Layers,
   ChevronDown,
-  ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Check,
 } from 'lucide-react';
 import { ConfirmActionModal } from './modals/ConfirmActionModal';
@@ -209,393 +209,310 @@ export const ScoreboardConfigController: React.FC<ScoreboardConfigControllerProp
   };
 
   const isScoreboardLive = viewMode === 'SCOREBOARD_ONLY';
+  const segundos = timer.mode === 'countdown' ? timer.secondsRemaining : timer.stopwatchSeconds;
+
+  const visibles: Array<{ key: keyof LiveHudToggles; label: string }> = [
+    { key: 'showScores', label: 'Puntajes' },
+    { key: 'showTimer', label: 'Reloj' },
+    { key: 'showPeriod', label: 'Ronda o periodo' },
+    { key: 'showRoundHistory', label: 'Historial de rondas' },
+    { key: 'showEventTitles', label: 'Título del evento' },
+    { key: 'showTicker', label: 'Cintillo inferior' },
+    { key: 'showFouls', label: 'Faltas' },
+    { key: 'showPossession', label: 'Saque o posesión' },
+  ];
 
   return (
-    <div className="flex-1 flex flex-col p-4 sm:p-5 bg-[#070b14] overflow-y-auto space-y-4 select-none">
-      {/* 1. TOP BAR: Event Title + Compact Sport Preset Dropdown + Mode Switcher */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 shadow-lg">
-        {/* Title Input & Sport Preset */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="p-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl shrink-0">
-            <Tv className="w-5 h-5" />
-          </div>
-
-          <div>
-            <div className="text-[10px] uppercase font-black tracking-wider text-slate-400">
-              Título del Evento:
-            </div>
-            <input
-              type="text"
-              value={scoreboard.title}
-              onChange={(e) => onUpdateScoreboard({ ...scoreboard, title: e.target.value })}
-              className="bg-transparent font-black text-base text-white focus:outline-none focus:underline"
-              placeholder="Nombre del Torneo / Competencia..."
-            />
-          </div>
-
-          <div className="h-6 w-px bg-slate-800 hidden sm:block" />
-
-          {/* Sport Preset Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setIsPresetDropdownOpen(!isPresetDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 hover:border-slate-600 text-xs font-bold text-slate-200 transition-colors shadow-sm"
-            >
-              <span>{currentPreset.icon}</span>
-              <span>Plantilla: {currentPreset.label}</span>
-              {isPresetDropdownOpen ? (
-                <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-              ) : (
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-              )}
-            </button>
-
-            {/* Dropdown Menu */}
-            {isPresetDropdownOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-72 bg-slate-950 border border-slate-700 rounded-xl shadow-2xl p-1.5 z-50 animate-fadeIn">
-                <div className="text-[10px] uppercase font-bold text-slate-400 px-2 py-1 border-b border-slate-800/80 mb-1">
-                  Elegir Plantilla de Deporte:
-                </div>
-                <div className="space-y-1">
-                  {sportPresets.map((sp) => {
-                    const isSelected = sp.id === scoreboard.sportPreset;
-                    return (
-                      <button
-                        key={sp.id}
-                        onClick={() => handleSelectPreset(sp.id)}
-                        className={`w-full p-2 rounded-lg text-left text-xs flex items-center justify-between transition-colors ${
-                          isSelected
-                            ? 'bg-blue-600/30 border border-blue-500/50 text-white font-bold'
-                            : 'hover:bg-slate-900 text-slate-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-base">{sp.icon}</span>
-                          <div className="min-w-0">
-                            <div className="font-bold truncate">{sp.label}</div>
-                            <div className="text-[10px] text-slate-400 truncate">{sp.desc}</div>
-                          </div>
-                        </div>
-                        {isSelected && <Check className="w-4 h-4 text-blue-400 shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+    <div className="@container flex-1 select-none space-y-4 overflow-y-auto bg-[var(--c-bg)] p-4 xl:p-5">
+      {/* Encabezado del módulo */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[18px] font-bold text-[var(--c-text)]">Marcador</h1>
+          <p className="truncate text-[13px] text-[var(--c-text-3)]">
+            {currentPreset.icon} {currentPreset.label} · {scoreboard.title || 'Sin título'}
+          </p>
         </div>
 
-        {/* Right Mode Toggle: 1v1 vs Leaderboard */}
         <div className="flex items-center gap-2">
-          <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800 shadow-inner">
-            <button
-              onClick={() => onUpdateScoreboard({ ...scoreboard, mode: 'one_on_one' })}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                scoreboard.mode === 'one_on_one'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Duelo 1 vs 1
-            </button>
-            <button
-              onClick={() => onUpdateScoreboard({ ...scoreboard, mode: 'multiplayer' })}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                scoreboard.mode === 'multiplayer'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Tabla (3+)
-            </button>
+          <div className="flex rounded-lg border border-[var(--c-line)] bg-[var(--c-panel)] p-0.5" role="group" aria-label="Formato del marcador">
+            {[
+              { id: 'one_on_one' as const, label: 'Duelo 1 vs 1' },
+              { id: 'multiplayer' as const, label: 'Tabla (3+)' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => onUpdateScoreboard({ ...scoreboard, mode: m.id })}
+                aria-pressed={scoreboard.mode === m.id}
+                className={`rounded-md px-3 py-1.5 text-[13px] transition-colors ${
+                  scoreboard.mode === m.id
+                    ? 'bg-[var(--c-panel-2)] font-bold text-[var(--c-text)] shadow-[inset_0_0_0_1px_var(--c-line-strong)]'
+                    : 'font-semibold text-[var(--c-text-3)] hover:text-[var(--c-text)]'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
           </div>
 
-          {/* Quick Put Live Button */}
           <button
             onClick={() => onSetViewMode('SCOREBOARD_ONLY')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            disabled={isScoreboardLive}
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-bold transition-colors ${
               isScoreboardLive
-                ? 'bg-red-600 text-white shadow-md shadow-red-600/30 ring-2 ring-red-400 animate-pulse'
-                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20'
+                ? 'cursor-default border border-red-500/60 bg-red-500/10 text-red-300'
+                : 'bg-[var(--c-accent)] text-white hover:bg-blue-500'
             }`}
           >
-            {isScoreboardLive ? '● Marcador AL AIRE' : 'Transmitir Marcador'}
+            {isScoreboardLive ? (
+              <>
+                <span className="h-2 w-2 rounded-full bg-red-500" aria-hidden />
+                Al aire
+              </>
+            ) : (
+              <>
+                <Tv className="h-4 w-4" />
+                Poner al aire
+              </>
+            )}
           </button>
         </div>
       </div>
 
-      {/* 2. CENTER STAGE (PROTAGONISTA): CRONÓMETRO + RONDA / PERIODO LADO A LADO */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* CARD A: CRONÓMETRO DE TRANSMISIÓN */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-amber-400" />
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
-                Cronómetro de Transmisión
-              </h3>
-            </div>
+      <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
+        {/* Cronómetro */}
+        <Tarjeta icono={Clock} titulo="Cronómetro">
+          <div className="mb-3 flex rounded-lg border border-[var(--c-line)] bg-[var(--c-bg)] p-0.5" role="group" aria-label="Tipo de cronómetro">
+            {[
+              { id: 'countdown', label: 'Regresivo' },
+              { id: 'stopwatch', label: 'Ascendente' },
+              { id: 'off', label: 'Apagado' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                onClick={() => onUpdateTimer({ ...timer, mode: m.id as TimerState['mode'] })}
+                aria-pressed={timer.mode === m.id}
+                className={`flex-1 rounded-md py-1 text-[12px] transition-colors ${
+                  timer.mode === m.id ? 'bg-[var(--c-panel-2)] font-bold text-[var(--c-text)]' : 'font-semibold text-[var(--c-text-3)] hover:text-[var(--c-text)]'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
 
-            <select
-              value={timer.mode}
-              onChange={(e) => onUpdateTimer({ ...timer, mode: e.target.value as any })}
-              aria-label="Modo de cronómetro"
-              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-300 font-bold focus:outline-none focus:border-amber-500"
+          <div className={`rounded-xl border border-[var(--c-line)] bg-[var(--c-bg)] py-4 text-center ${timer.mode === 'off' ? 'opacity-40' : ''}`}>
+            <p className="font-mono text-[52px] font-black leading-none text-[var(--c-text)]">{formatTimeDisplay(segundos)}</p>
+            <p className="mt-2 flex items-center justify-center gap-1.5 text-[12px] font-semibold text-[var(--c-text-3)]">
+              <span className={`h-2 w-2 rounded-full ${timer.isRunning ? 'bg-emerald-400' : 'bg-[var(--c-line-strong)]'}`} aria-hidden />
+              {timer.mode === 'off' ? 'Apagado' : timer.isRunning ? 'Corriendo' : 'En pausa'}
+            </p>
+          </div>
+
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={handleToggleTimer}
+              disabled={timer.mode === 'off'}
+              className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-[14px] font-bold transition-colors disabled:opacity-40 ${
+                timer.isRunning ? 'bg-amber-500 text-slate-950 hover:bg-amber-400' : 'bg-emerald-600 text-white hover:bg-emerald-500'
+              }`}
             >
-              <option value="countdown">Modo: Regresivo (Cuenta Atrás)</option>
-              <option value="stopwatch">Modo: Ascendente (Cronómetro)</option>
-              <option value="off">Modo: Apagado</option>
-            </select>
+              {timer.isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              {timer.isRunning ? 'Pausar' : 'Iniciar'}
+            </button>
+            <button
+              onClick={handleResetTimer}
+              className="rounded-lg border border-[var(--c-line)] bg-[var(--c-panel-2)] px-3 text-[var(--c-text-2)] transition-colors hover:text-[var(--c-text)]"
+              title="Reiniciar el cronómetro"
+              aria-label="Reiniciar el cronómetro"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* Giant Time Readout */}
-          <div className="my-2 py-4 px-6 bg-slate-950 border border-slate-800 rounded-xl text-center shadow-inner">
-            <div className="text-5xl lg:text-6xl font-black font-mono tracking-wider text-white">
-              {formatTimeDisplay(
-                timer.mode === 'countdown' ? timer.secondsRemaining : timer.stopwatchSeconds
-              )}
-            </div>
-            <div className="text-[10px] uppercase font-bold text-slate-400 mt-1.5 flex items-center justify-center gap-2">
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  timer.isRunning ? 'bg-emerald-400 animate-ping' : 'bg-slate-600'
-                }`}
-              />
-              <span>
-                {timer.isRunning
-                  ? 'En Marcha'
-                  : timer.mode === 'countdown'
-                  ? 'Pausado (Cuenta Regresiva)'
-                  : 'Pausado (Cronómetro)'}
-              </span>
-            </div>
+          <div className="mt-2 grid grid-cols-4 gap-1.5">
+            {[
+              { d: -60, l: '−1 min' },
+              { d: -30, l: '−30 s' },
+              { d: 30, l: '+30 s' },
+              { d: 60, l: '+1 min' },
+            ].map((a) => (
+              <button
+                key={a.d}
+                onClick={() => handleAdjustTimer(a.d)}
+                className="rounded-md bg-[var(--c-panel-2)] py-1.5 text-[12px] font-semibold text-[var(--c-text-2)] transition-colors hover:text-[var(--c-text)]"
+              >
+                {a.l}
+              </button>
+            ))}
           </div>
+        </Tarjeta>
 
-          {/* Big Start / Pause & Reset Buttons */}
-          <div className="space-y-2 mt-1">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleToggleTimer}
-                className={`flex-1 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98 ${
-                  timer.isRunning
-                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 ring-2 ring-amber-300'
-                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                }`}
-              >
-                {timer.isRunning ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                <span>{timer.isRunning ? 'Pausar Reloj' : 'Iniciar Reloj'}</span>
-              </button>
-
-              <button
-                onClick={handleResetTimer}
-                className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-colors"
-                title="Reiniciar cronómetro"
-              >
-                <RotateCcw className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Quick Adjustment Grid */}
-            <div className="grid grid-cols-4 gap-1.5">
-              <button
-                onClick={() => handleAdjustTimer(60)}
-                className="py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-lg text-xs font-mono font-bold border border-slate-800"
-              >
-                +1 min
-              </button>
-              <button
-                onClick={() => handleAdjustTimer(-60)}
-                className="py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-lg text-xs font-mono font-bold border border-slate-800"
-              >
-                -1 min
-              </button>
-              <button
-                onClick={() => handleAdjustTimer(30)}
-                className="py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-lg text-xs font-mono font-bold border border-slate-800"
-              >
-                +30s
-              </button>
-              <button
-                onClick={() => handleAdjustTimer(-30)}
-                className="py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-300 rounded-lg text-xs font-mono font-bold border border-slate-800"
-              >
-                -30s
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* CARD B: RONDA Y PERIODO ACTUAL */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-xl">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-purple-400" />
-              <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
-                Ronda y Periodo Actual
-              </h3>
-            </div>
-
-            <div className="text-xs text-slate-400 font-mono">
-              Total Rondas: {scoreboard.totalRounds}
-            </div>
-          </div>
-
-          {/* Period Readout & Label Input */}
-          <div className="my-2 py-4 px-6 bg-slate-950 border border-slate-800 rounded-xl shadow-inner flex items-center justify-between">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                Nombre del Periodo:
-              </span>
+        {/* Ronda */}
+        <Tarjeta
+          icono={Layers}
+          titulo="Ronda"
+          accion={
+            scoreboard.totalRounds > 0 ? (
+              <span className="text-[12px] text-[var(--c-text-3)]">de {scoreboard.totalRounds}</span>
+            ) : undefined
+          }
+        >
+          <div className="flex items-end justify-between gap-3 rounded-xl border border-[var(--c-line)] bg-[var(--c-bg)] px-4 py-3.5">
+            <label className="min-w-0 flex-1">
+              <span className="mb-1 block text-[12px] text-[var(--c-text-3)]">Se llama</span>
               <input
                 type="text"
                 value={scoreboard.periodTypeLabel}
-                onChange={(e) =>
-                  onUpdateScoreboard({ ...scoreboard, periodTypeLabel: e.target.value })
-                }
-                className="bg-transparent font-black text-xl text-white focus:outline-none focus:underline"
-                placeholder="Cuarto / Tiempo / Set..."
+                onChange={(e) => onUpdateScoreboard({ ...scoreboard, periodTypeLabel: e.target.value })}
+                className="w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 -ml-1 text-[18px] font-bold text-[var(--c-text)] hover:border-[var(--c-line)] focus:border-[var(--c-accent)] focus:outline-none"
+                placeholder="Ronda, cuarto, set…"
               />
-            </div>
-
-            <div className="text-right">
-              <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">
-                Número Actual:
-              </span>
-              <div className="text-4xl lg:text-5xl font-black font-mono text-purple-400 leading-none">
-                {scoreboard.currentRound}
-              </div>
-            </div>
+            </label>
+            <p className="font-mono text-[52px] font-black leading-none text-[var(--c-text)]">{scoreboard.currentRound}</p>
           </div>
 
-          {/* Period Navigation Buttons */}
-          <div className="space-y-2 mt-1">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={handlePrevRound}
-                className="py-3 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-black transition-colors"
-              >
-                &lt;&lt; Periodo Anterior
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={handlePrevRound}
+              className="flex items-center justify-center gap-1 rounded-lg border border-[var(--c-line)] bg-[var(--c-panel-2)] py-2.5 text-[13px] font-semibold text-[var(--c-text)] transition-colors hover:border-[var(--c-line-strong)]"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </button>
+            <button
+              onClick={handleNextRound}
+              className="flex items-center justify-center gap-1 rounded-lg bg-[var(--c-accent)] py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-blue-500"
+              title="Guarda los puntajes de esta ronda en el historial y pasa a la siguiente"
+            >
+              Siguiente
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between border-t border-[var(--c-line)] pt-2.5 text-[12px] text-[var(--c-text-3)]">
+            <span>
+              {scoreboard.roundHistory.length === 0
+                ? 'Sin rondas guardadas'
+                : `${scoreboard.roundHistory.length} ${scoreboard.roundHistory.length === 1 ? 'ronda guardada' : 'rondas guardadas'}`}
+            </span>
+            {scoreboard.roundHistory.length > 0 && (
+              <button onClick={handleRequestClearHistory} className="font-semibold text-red-400 hover:text-red-300">
+                Borrar historial
               </button>
-              <button
-                onClick={handleNextRound}
-                className="py-3 px-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-black shadow-lg shadow-purple-600/30 transition-all active:scale-98"
-              >
-                Siguiente Periodo &gt;&gt;
-              </button>
-            </div>
-
-            {/* History count & clear */}
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-800/80">
-              <span className="font-medium">
-                Instantáneas guardadas: {scoreboard.roundHistory.length}
-              </span>
-              {scoreboard.roundHistory.length > 0 && (
-                <button
-                  onClick={handleRequestClearHistory}
-                  className="text-red-400 hover:text-red-300 font-bold text-[11px] cursor-pointer"
-                >
-                  Limpiar Historial
-                </button>
-              )}
-            </div>
+            )}
           </div>
-        </div>
-      </div>
+        </Tarjeta>
 
-      {/* 3. LOWER SECTION: HUD VISIBILITY MATRIX (COMPACT PILLS) + LOWER-THIRD TICKER */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* HUD Matrix Pills */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 shadow-lg">
-          <div className="flex items-center gap-2 mb-3">
-            <Eye className="w-4 h-4 text-emerald-400" />
-            <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
-              Matriz de Visibilidad en Pantalla (HUD Toggles)
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {[
-              { key: 'showTimer', label: 'Reloj / Timer' },
-              { key: 'showPeriod', label: 'Periodo / Ronda' },
-              { key: 'showRoundHistory', label: 'Historial Sets' },
-              { key: 'showFouls', label: 'Faltas / Tarjetas' },
-              { key: 'showPossession', label: 'Posesión / Saque' },
-              { key: 'showEventTitles', label: 'Títulos Evento' },
-              { key: 'showScores', label: 'Puntajes Grandes' },
-              { key: 'showTicker', label: 'Cintillo Ticker' },
-            ].map((toggle) => {
-              const isChecked = (hudToggles as any)[toggle.key];
+        {/* Qué se ve en pantalla */}
+        <Tarjeta icono={Eye} titulo="Qué se ve en pantalla">
+          <div className="grid grid-cols-1 gap-x-4 gap-y-0.5 @md:grid-cols-2">
+            {visibles.map((v) => {
+              const activo = Boolean(hudToggles[v.key]);
               return (
                 <button
-                  key={toggle.key}
-                  onClick={() =>
-                    onUpdateHudToggles({
-                      ...hudToggles,
-                      [toggle.key]: !isChecked,
-                    })
-                  }
-                  className={`p-2 rounded-xl text-xs font-bold text-left border transition-all ${
-                    isChecked
-                      ? 'bg-emerald-950/70 border-emerald-500/80 text-emerald-300 shadow-sm'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-500 hover:text-slate-300'
-                  }`}
+                  key={v.key}
+                  role="switch"
+                  aria-checked={activo}
+                  onClick={() => onUpdateHudToggles({ ...hudToggles, [v.key]: !activo })}
+                  className="flex items-center justify-between gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] text-[var(--c-text)] hover:bg-[var(--c-panel-2)]"
                 >
-                  <div className="text-[10px] font-bold">
-                    {isChecked ? '● Visible' : '○ Oculto'}
-                  </div>
-                  <div className="truncate mt-0.5">{toggle.label}</div>
+                  <span className={activo ? '' : 'text-[var(--c-text-3)]'}>{v.label}</span>
+                  <Switch activo={activo} />
                 </button>
               );
             })}
           </div>
-        </div>
+        </Tarjeta>
 
-        {/* Lower-Third Ticker Editor Bar */}
-        <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between shadow-lg">
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Type className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-black uppercase tracking-wider text-slate-200">
-                  Cintillo Informativo Inferior (Ticker)
-                </h3>
-              </div>
-
-              <button
-                onClick={() => onUpdateScene({ ...scene, tickerActive: !scene.tickerActive })}
-                className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${
-                  scene.tickerActive
-                    ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30'
-                    : 'bg-slate-800 text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                {scene.tickerActive ? '● Activo en Pantalla' : '○ Inactivo'}
-              </button>
-            </div>
-
-            <textarea
-              value={scene.tickerMessage}
-              onChange={(e) => onUpdateScene({ ...scene, tickerMessage: e.target.value })}
-              rows={2}
-              placeholder="Escribe el mensaje o aviso que recorrerá la parte inferior del proyector..."
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 font-mono resize-none"
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2">
-            <span>💡 Mensaje animado en bucle continuo en la pantalla del proyector.</span>
-            <span className="font-mono text-slate-400">{scene.tickerMessage.length} caracteres</span>
-          </div>
-        </div>
+        {/* Cintillo */}
+        <Tarjeta
+          icono={Type}
+          titulo="Cintillo inferior"
+          accion={
+            <button
+              role="switch"
+              aria-checked={scene.tickerActive}
+              onClick={() => onUpdateScene({ ...scene, tickerActive: !scene.tickerActive })}
+              className="flex items-center gap-2 text-[12px] font-semibold text-[var(--c-text-2)] hover:text-[var(--c-text)]"
+            >
+              {scene.tickerActive ? 'Visible' : 'Oculto'}
+              <Switch activo={scene.tickerActive} />
+            </button>
+          }
+        >
+          <textarea
+            value={scene.tickerMessage}
+            onChange={(e) => onUpdateScene({ ...scene, tickerMessage: e.target.value })}
+            rows={3}
+            placeholder="Aviso que se muestra abajo en el proyector…"
+            className="w-full resize-none rounded-lg border border-[var(--c-line)] bg-[var(--c-bg)] p-2.5 text-[13px] text-[var(--c-text)] focus:border-[var(--c-accent)] focus:outline-none"
+          />
+          <p className="mt-1.5 text-right text-[12px] text-[var(--c-text-3)]">{scene.tickerMessage.length} caracteres</p>
+        </Tarjeta>
       </div>
 
-      {/* Confirmation Modal: Clear Round History */}
+      {/* Configuración (se usa antes del evento) */}
+      <details className="group rounded-2xl border border-[var(--c-line)] bg-[var(--c-panel)]" open={isPresetDropdownOpen}>
+        <summary
+          onClick={(e) => {
+            e.preventDefault();
+            setIsPresetDropdownOpen(!isPresetDropdownOpen);
+          }}
+          className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3"
+        >
+          <span className="flex items-center gap-2 text-[13px] font-bold text-[var(--c-text)]">
+            <Sliders className="h-4 w-4 text-[var(--c-text-3)]" />
+            Configuración del marcador
+            <span className="font-normal text-[var(--c-text-3)]">· título y tipo de competencia</span>
+          </span>
+          <ChevronDown className={`h-4 w-4 text-[var(--c-text-3)] transition-transform ${isPresetDropdownOpen ? 'rotate-180' : ''}`} />
+        </summary>
+
+        <div className="space-y-4 border-t border-[var(--c-line)] px-4 py-4">
+          <label className="block">
+            <span className="mb-1 block text-[12px] font-semibold text-[var(--c-text-2)]">Título que aparece en el proyector</span>
+            <input
+              type="text"
+              value={scoreboard.title}
+              onChange={(e) => onUpdateScoreboard({ ...scoreboard, title: e.target.value })}
+              className="w-full rounded-lg border border-[var(--c-line)] bg-[var(--c-bg)] px-3 py-2 text-[14px] font-semibold text-[var(--c-text)] focus:border-[var(--c-accent)] focus:outline-none"
+              placeholder="Nombre del torneo o competencia…"
+            />
+          </label>
+
+          <div>
+            <span className="mb-1.5 block text-[12px] font-semibold text-[var(--c-text-2)]">Tipo de competencia</span>
+            <div className="grid grid-cols-1 gap-1.5 @xl:grid-cols-2 @4xl:grid-cols-3">
+              {sportPresets.map((sp) => {
+                const elegido = sp.id === scoreboard.sportPreset;
+                return (
+                  <button
+                    key={sp.id}
+                    onClick={() => handleSelectPreset(sp.id)}
+                    aria-pressed={elegido}
+                    className={`flex items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors ${
+                      elegido ? 'border-[var(--c-accent)] bg-[var(--c-accent-soft)]' : 'border-[var(--c-line)] hover:border-[var(--c-line-strong)]'
+                    }`}
+                  >
+                    <span className="text-[16px] leading-none">{sp.icon}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] font-bold text-[var(--c-text)]">{sp.label}</span>
+                      <span className="block text-[12px] text-[var(--c-text-3)]">{sp.desc}</span>
+                    </span>
+                    {elegido && <Check className="h-4 w-4 shrink-0 text-[var(--c-accent)]" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </details>
+
       <ConfirmActionModal
         isOpen={isConfirmClearHistoryOpen}
-        title="¿Vaciar Historial de Rondas Anteriores?"
-        message="Se eliminarán todas las instantáneas de rondas previas guardadas en este partido. Los puntajes actuales de los equipos no se modificarán."
-        confirmText="Sí, Vaciar Historial"
+        title="¿Borrar el historial de rondas?"
+        message="Se borran los puntajes guardados de las rondas anteriores. Los puntajes actuales no cambian."
+        confirmText="Sí, borrar"
         cancelText="Cancelar"
         severity="danger"
         iconType="history"
@@ -605,3 +522,30 @@ export const ScoreboardConfigController: React.FC<ScoreboardConfigControllerProp
     </div>
   );
 };
+
+const Tarjeta: React.FC<{
+  icono: React.ComponentType<{ className?: string }>;
+  titulo: string;
+  accion?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ icono: Icono, titulo, accion, children }) => (
+  <section className="@container rounded-2xl border border-[var(--c-line)] bg-[var(--c-panel)] p-4">
+    <div className="mb-3 flex items-center justify-between gap-2">
+      <h2 className="flex items-center gap-2 text-[13px] font-bold text-[var(--c-text)]">
+        <Icono className="h-4 w-4 text-[var(--c-text-3)]" />
+        {titulo}
+      </h2>
+      {accion}
+    </div>
+    {children}
+  </section>
+);
+
+const Switch: React.FC<{ activo: boolean }> = ({ activo }) => (
+  <span
+    className={`relative h-[18px] w-8 shrink-0 rounded-full transition-colors ${activo ? 'bg-[var(--c-accent)]' : 'bg-[var(--c-line-strong)]'}`}
+    aria-hidden
+  >
+    <span className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white transition-all ${activo ? 'left-[16px]' : 'left-[2px]'}`} />
+  </span>
+);
