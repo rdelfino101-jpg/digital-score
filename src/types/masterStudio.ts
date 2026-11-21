@@ -671,7 +671,7 @@ export type MasterSyncMessage =
   | { type: 'BUZZER_OPEN'; room?: string; timestamp: number }
   | { type: 'BUZZER_CLOSE'; room?: string; timestamp: number }
   | { type: 'BUZZER_RESET'; room?: string; timestamp: number }
-  | { type: 'BUZZER_JUDGE'; result: 'correct' | 'incorrect'; room?: string; timestamp: number }
+  | { type: 'BUZZER_JUDGE'; result: 'correct' | 'incorrect'; silent?: boolean; room?: string; timestamp: number }
   | { type: 'BUZZER_PRESS'; teamId: string; token: string; room?: string; timestamp: number }
   | { type: 'BUZZER_STATE'; state: BuzzerServerState; buzzer?: BuzzerServerState; room?: string; timestamp: number }
   | { type: 'BUZZER_CONFIG_UPDATE'; config: Partial<BuzzerRuleConfig>; room?: string; timestamp: number }

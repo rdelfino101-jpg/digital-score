@@ -94,7 +94,8 @@ export function createMasterSyncChannel(
   sendBuzzerOpen: () => void;
   sendBuzzerClose: () => void;
   sendBuzzerReset: () => void;
-  sendBuzzerJudge: (result: 'correct' | 'incorrect') => void;
+  /** silent: el servidor no reproduce sonido (la consola ya lo hizo) */
+  sendBuzzerJudge: (result: 'correct' | 'incorrect', silent?: boolean) => void;
   sendBuzzerPress: (teamId: string, token: string) => void;
   sendBuzzerConfigUpdate: (config: Partial<import('../types/masterStudio').BuzzerRuleConfig>) => void;
   sendBuzzerRegenerateTokens: () => void;
@@ -351,7 +352,8 @@ export function createMasterSyncChannel(
     sendBuzzerOpen: () => dispatch({ type: 'BUZZER_OPEN', room: roomCode, timestamp: Date.now() }),
     sendBuzzerClose: () => dispatch({ type: 'BUZZER_CLOSE', room: roomCode, timestamp: Date.now() }),
     sendBuzzerReset: () => dispatch({ type: 'BUZZER_RESET', room: roomCode, timestamp: Date.now() }),
-    sendBuzzerJudge: (result: 'correct' | 'incorrect') => dispatch({ type: 'BUZZER_JUDGE', result, room: roomCode, timestamp: Date.now() }),
+    sendBuzzerJudge: (result: 'correct' | 'incorrect', silent = false) =>
+      dispatch({ type: 'BUZZER_JUDGE', result, silent, room: roomCode, timestamp: Date.now() }),
     sendBuzzerPress: (teamId: string, token: string) => dispatch({ type: 'BUZZER_PRESS', teamId, token, room: roomCode, timestamp: Date.now() }),
     sendBuzzerConfigUpdate: (config: Partial<import('../types/masterStudio').BuzzerRuleConfig>) => dispatch({ type: 'BUZZER_CONFIG_UPDATE', config, room: roomCode, timestamp: Date.now() }),
     sendBuzzerRegenerateTokens: () => dispatch({ type: 'BUZZER_REGENERATE_TOKENS', room: roomCode, timestamp: Date.now() }),

@@ -268,6 +268,7 @@ function ProjectorRuntime() {
   });
 
   const lastReceivedTimestampRef = useRef<number>(projectorState?.timestamp || 0);
+  const pulsadorServidorRef = useRef<MasterLiveState['buzzer'] | null>(null);
 
   useEffect(() => {
     // 1. Initial local load
@@ -284,10 +285,14 @@ function ProjectorRuntime() {
       onMessage: (msg: MasterSyncMessage) => {
         if (msg.type === 'SYNC_MASTER_STATE' && msg.payload) {
           lastReceivedTimestampRef.current = msg.payload.timestamp;
-          setProjectorState(msg.payload);
+          // El pulsador manda el servidor (BUZZER_STATE); la copia de la consola puede venir atrasada
+          setProjectorState({ ...msg.payload, buzzer: pulsadorServidorRef.current ?? msg.payload.buzzer });
         } else if (msg.type === 'BUZZER_STATE') {
           const bState = msg.buzzer || msg.state;
-          if (bState) setProjectorState((prev) => (prev ? { ...prev, buzzer: bState } : prev));
+          if (bState) {
+            pulsadorServidorRef.current = bState;
+            setProjectorState((prev) => (prev ? { ...prev, buzzer: bState } : prev));
+          }
         } else if (msg.type === 'TRIGGER_SOUND') {
           if (msg.sound === 'correct') studioAudio.playCorrect();
           else if (msg.sound === 'error') studioAudio.playError();
@@ -699,6 +704,48 @@ function DirectorOperatorStudio() {
       };
     });
   }, [handleBroadcastSound, updateMaster]);
+
+  // ---------- Pulsadores ----------
+  // ¿Hay un equipo respondiendo con pulsador dentro de un juego?
+  const pulsadorRespondiendoEnJuego = () => {
+    const b = masterStateRef.current.buzzer;
+    return Boolean(b && b.status === 'answering' && b.answeringTeamId && b.config?.useBuzzersInGameStage);
+  };
+
+  // ¡Correcto! en un juego: además de los puntos del juego, cierra la ronda del pulsador
+  const handleGameAwardWithBuzzer = useCallback(
+    (points: number, actionName: string) => {
+      const cerrarPulsador = pulsadorRespondiendoEnJuego();
+      handleAwardActiveTeam(points, actionName);
+      if (cerrarPulsador) syncChannelRef.current?.sendBuzzerJudge('correct', true);
+    },
+    [handleAwardActiveTeam]
+  );
+
+  // Fallo en un juego: el pulsador pasa al siguiente equipo que pulsó
+  const handleGameErrorWithBuzzer = useCallback(() => {
+    const pasarPulsador = pulsadorRespondiendoEnJuego();
+    handleTriggerError();
+    if (pasarPulsador) syncChannelRef.current?.sendBuzzerJudge('incorrect', true);
+  }, [handleTriggerError]);
+
+  // Correcto / Incorrecto desde la pestaña Pulsadores: la consola aplica los puntos
+  // (antes los sumaba el servidor y la siguiente sincronización los borraba)
+  const handleBuzzerJudgeFromPanel = useCallback(
+    (result: 'correct' | 'incorrect') => {
+      const b = masterStateRef.current.buzzer;
+      const equipo = b?.status === 'answering' ? b.answeringTeamId : null;
+      if (equipo) {
+        if (result === 'correct') {
+          handleAwardPoints(equipo, b?.config?.pointsForCorrect || 100, false);
+        } else if (b?.config?.penaltyForIncorrect) {
+          handleAwardPoints(equipo, b.config.penaltyForIncorrect, false);
+        }
+      }
+      syncChannelRef.current?.sendBuzzerJudge(result);
+    },
+    [handleAwardPoints]
+  );
 
   const handleTriggerCelebration = useCallback(() => {
     const ranked = rankStudioTeams(masterStateRef.current.teams);
@@ -1115,10 +1162,27 @@ function DirectorOperatorStudio() {
         } else if (msg.type === 'BUZZER_STATE') {
           const bState = msg.buzzer || msg.state;
           if (bState) {
-            updateMaster((prev) => ({
-              ...prev,
-              buzzer: bState,
-            }));
+            updateMaster((prev) => {
+              // En los juegos, el equipo que gana el pulsador toma el turno. Lo aplica la
+              // consola (no el servidor) para que la próxima sincronización no lo pise.
+              const nuevoQueResponde =
+                bState.status === 'answering' &&
+                bState.answeringTeamId &&
+                bState.answeringTeamId !== prev.buzzer?.answeringTeamId &&
+                bState.config?.useBuzzersInGameStage &&
+                prev.teams.some((t) => t.id === bState.answeringTeamId);
+              return {
+                ...prev,
+                buzzer: bState,
+                turn: nuevoQueResponde
+                  ? {
+                      ...prev.turn,
+                      activeTeamId: bState.answeringTeamId,
+                      lastActionMessage: `Pulsador: responde ${prev.teams.find((t) => t.id === bState.answeringTeamId)?.name || 'Equipo'}`,
+                    }
+                  : prev.turn,
+              };
+            });
           }
         } else if (msg.type === 'TRIGGER_SOUND') {
           if (msg.sound === 'correct') studioAudio.playCorrect();
@@ -1369,9 +1433,14 @@ function DirectorOperatorStudio() {
               state={masterState}
               onUpdateState={updateMaster}
               onSetViewMode={handleSetViewMode}
-              onAwardActiveTeam={handleAwardActiveTeam}
-              onTriggerError={handleTriggerError}
+              onAwardActiveTeam={handleGameAwardWithBuzzer}
+              onTriggerError={handleGameErrorWithBuzzer}
               onNextTurn={handleNextTurn}
+              onBuzzerOpen={() => syncChannelRef.current?.sendBuzzerOpen()}
+              onBuzzerReset={() => syncChannelRef.current?.sendBuzzerReset()}
+              onToggleBuzzersInGame={(activo) =>
+                syncChannelRef.current?.sendBuzzerConfigUpdate({ useBuzzersInGameStage: activo })
+              }
             />
           ) : activeTab === 'raffle' ? (
             <RaffleStudioController
@@ -1389,9 +1458,7 @@ function DirectorOperatorStudio() {
               onOpen={() => syncChannelRef.current?.sendBuzzerOpen()}
               onClose={() => syncChannelRef.current?.sendBuzzerClose()}
               onReset={() => syncChannelRef.current?.sendBuzzerReset()}
-              onJudge={(result: 'correct' | 'incorrect') =>
-                syncChannelRef.current?.sendBuzzerJudge(result)
-              }
+              onJudge={handleBuzzerJudgeFromPanel}
               onConfigUpdate={(config: Partial<BuzzerRuleConfig>) =>
                 syncChannelRef.current?.sendBuzzerConfigUpdate(config)
               }

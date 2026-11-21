@@ -25,6 +25,10 @@ export const MobileBuzzerView: React.FC = () => {
   const [teamInfo, setTeamInfo] = useState<StudioTeam | null>(null);
   const [disconnectedReason, setDisconnectedReason] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
+  // Diferencia entre el reloj del servidor y el del celular. Los bloqueos y el tiempo
+  // para responder vienen con la hora del servidor; si el celular tiene la hora
+  // adelantada o atrasada, sin esto mostraba «Bloqueado» de más o de menos.
+  const [desfaseReloj, setDesfaseReloj] = useState(0);
   const [isPressing, setIsPressing] = useState(false);
 
   const prevStatusRef = useRef<string | null>(null);
@@ -124,14 +128,17 @@ export const MobileBuzzerView: React.FC = () => {
       onMessage: (msg: MasterSyncMessage) => {
         if (msg.type === 'BUZZER_STATE') {
           setBuzzerState(msg.state);
+          if (typeof msg.timestamp === 'number' && msg.timestamp > 0) {
+            setDesfaseReloj(msg.timestamp - Date.now());
+          }
         } else if (msg.type === 'SYNC_MASTER_STATE') {
           if (msg.payload && Array.isArray(msg.payload.teams)) {
             const current = msg.payload.teams.find((t) => t.id === teamId);
             if (current) setTeamInfo(current);
           }
-          if (msg.payload && msg.payload.buzzer) {
-            setBuzzerState(msg.payload.buzzer);
-          }
+          // El estado del pulsador solo se toma de BUZZER_STATE (lo manda el servidor).
+          // La copia que viaja con la consola puede llegar atrasada y volvía a mostrar
+          // «cerrado» justo después de que el director abría.
         } else if (msg.type === 'BUZZER_PING') {
           // Reply with pong for latency measurement
           sync.sendBuzzerPong(msg.clientTimestamp, Date.now());
@@ -186,9 +193,10 @@ export const MobileBuzzerView: React.FC = () => {
   const teamScore = teamInfo?.score ?? 0;
 
   // Lockout calculation
+  const horaServidor = now + desfaseReloj;
   const lockoutUntil = buzzerState?.lockedOutUntil?.[teamId] || 0;
-  const isLockedOut = lockoutUntil > now;
-  const lockoutRemainingSec = isLockedOut ? ((lockoutUntil - now) / 1000).toFixed(1) : null;
+  const isLockedOut = lockoutUntil > horaServidor;
+  const lockoutRemainingSec = isLockedOut ? ((lockoutUntil - horaServidor) / 1000).toFixed(1) : null;
 
   // Ordering and answering calculations
   const status = buzzerState?.status || 'closed';
@@ -201,9 +209,9 @@ export const MobileBuzzerView: React.FC = () => {
 
   // Answer countdown seconds
   const answerDeadline = buzzerState?.answerDeadline || 0;
-  const answerSecRemaining = Math.max(0, (answerDeadline - now) / 1000).toFixed(1);
+  const answerSecRemaining = Math.max(0, (answerDeadline - horaServidor) / 1000).toFixed(1);
   const totalAnswerSec = buzzerState?.config?.answerTimeSeconds || 5;
-  const answerProgressPct = Math.min(100, Math.max(0, ((answerDeadline - now) / (totalAnswerSec * 1000)) * 100));
+  const answerProgressPct = Math.min(100, Math.max(0, ((answerDeadline - horaServidor) / (totalAnswerSec * 1000)) * 100));
 
   // If another device replaced this phone or tokens were regenerated
   if (disconnectedReason) {
@@ -363,7 +371,7 @@ export const MobileBuzzerView: React.FC = () => {
               <span className="text-5xl font-mono font-black mt-1">{lockoutRemainingSec}s</span>
             </button>
             <p className="mt-6 text-sm text-red-400 font-bold max-w-xs">
-              Pulsaron antes de tiempo. Si vuelven a pulsar mientras está bloqueado, el tiempo se reinicia.
+              Pulsaron antes de que se abrieran los pulsadores. Esperen a que termine la cuenta.
             </p>
           </div>
         ) : status === 'open' ? (

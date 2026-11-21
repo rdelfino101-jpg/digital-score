@@ -214,7 +214,23 @@ async function startServer() {
     });
   }
 
-  function handleBuzzerJudge(room: RoomState, result: 'correct' | 'incorrect') {
+  // Tiempo para responder. En el show de pulsadores, si se acaba cuenta como incorrecto
+  // y pasa al siguiente. Dentro de los juegos NO: el director califica con los botones
+  // del juego y a veces tarda más de 5 s; antes eso dejaba al equipo excluido aunque
+  // hubiera respondido bien.
+  function programarTiempoAgotado(room: RoomState, answerTimeMs: number) {
+    if (room.buzzerAnswerTimer) clearTimeout(room.buzzerAnswerTimer);
+    room.buzzerAnswerTimer = null;
+    if (room.buzzer.config.useBuzzersInGameStage) return;
+    room.buzzerAnswerTimer = setTimeout(() => {
+      handleBuzzerJudge(room, 'incorrect');
+    }, answerTimeMs);
+  }
+
+  // El servidor solo arbitra el orden de los pulsadores. Puntos y turno los aplica la
+  // consola del director: si el servidor los cambiara en su copia, la siguiente
+  // sincronización del director los borraría (el director no lee esa copia).
+  function handleBuzzerJudge(room: RoomState, result: 'correct' | 'incorrect', silent = false) {
     if (room.buzzerAnswerTimer) {
       clearTimeout(room.buzzerAnswerTimer);
       room.buzzerAnswerTimer = null;
@@ -226,27 +242,14 @@ async function startServer() {
     const now = Date.now();
 
     if (result === 'correct') {
-      const points = room.buzzer.config.pointsForCorrect || 100;
-      if (room.latestMasterState && Array.isArray(room.latestMasterState.teams)) {
-        const team = room.latestMasterState.teams.find((t: any) => t.id === currentAnswering);
-        if (team) {
-          team.score = (team.score || 0) + points;
-          room.latestMasterState.timestamp = now;
-          broadcastToRoom(room.code, {
-            type: 'SYNC_MASTER_STATE',
-            payload: room.latestMasterState,
-            room: room.code,
-            timestamp: now,
-          });
-        }
+      if (!silent) {
+        broadcastToRoom(room.code, {
+          type: 'TRIGGER_SOUND',
+          sound: 'correct',
+          room: room.code,
+          timestamp: now,
+        });
       }
-
-      broadcastToRoom(room.code, {
-        type: 'TRIGGER_SOUND',
-        sound: 'correct',
-        room: room.code,
-        timestamp: now,
-      });
 
       room.buzzer.status = 'closed';
       room.buzzer.answeringTeamId = null;
@@ -254,27 +257,14 @@ async function startServer() {
       broadcastBuzzerState(room);
     } else {
       // Incorrect
-      const penalty = room.buzzer.config.penaltyForIncorrect || 0;
-      if (penalty !== 0 && room.latestMasterState && Array.isArray(room.latestMasterState.teams)) {
-        const team = room.latestMasterState.teams.find((t: any) => t.id === currentAnswering);
-        if (team) {
-          team.score = Math.max(0, (team.score || 0) + penalty);
-          room.latestMasterState.timestamp = now;
-          broadcastToRoom(room.code, {
-            type: 'SYNC_MASTER_STATE',
-            payload: room.latestMasterState,
-            room: room.code,
-            timestamp: now,
-          });
-        }
+      if (!silent) {
+        broadcastToRoom(room.code, {
+          type: 'TRIGGER_SOUND',
+          sound: 'error',
+          room: room.code,
+          timestamp: now,
+        });
       }
-
-      broadcastToRoom(room.code, {
-        type: 'TRIGGER_SOUND',
-        sound: 'error',
-        room: room.code,
-        timestamp: now,
-      });
 
       if (!room.buzzer.excludedTeams.includes(currentAnswering)) {
         room.buzzer.excludedTeams.push(currentAnswering);
@@ -288,22 +278,8 @@ async function startServer() {
           room.buzzer.answeringTeamId = nextPress.teamId;
           const answerTimeMs = (room.buzzer.config.answerTimeSeconds || 5) * 1000;
           room.buzzer.answerDeadline = now + answerTimeMs;
-
-          if (room.buzzer.config.useBuzzersInGameStage && room.latestMasterState) {
-            room.latestMasterState.turn.activeTeamId = nextPress.teamId;
-            broadcastToRoom(room.code, {
-              type: 'SYNC_MASTER_STATE',
-              payload: room.latestMasterState,
-              room: room.code,
-              timestamp: now,
-            });
-          }
-
           broadcastBuzzerState(room);
-
-          room.buzzerAnswerTimer = setTimeout(() => {
-            handleBuzzerJudge(room, 'incorrect');
-          }, answerTimeMs);
+          programarTiempoAgotado(room, answerTimeMs);
         } else {
           // No more pressed teams. Check if any teams remain that haven't been excluded
           const allTeams = (room.latestMasterState?.teams || []).map((t: any) => t.id);
@@ -619,9 +595,12 @@ async function startServer() {
             clearTimeout(currentRoom.buzzerAnswerTimer);
             currentRoom.buzzerAnswerTimer = null;
           }
+          // Abrir = pregunta nueva: nadie arrastra exclusiones ni bloqueos de la anterior
           currentRoom.buzzer.status = 'open';
           currentRoom.buzzer.openedAt = now;
           currentRoom.buzzer.presses = [];
+          currentRoom.buzzer.excludedTeams = [];
+          currentRoom.buzzer.lockedOutUntil = {};
           currentRoom.buzzer.answeringTeamId = null;
           currentRoom.buzzer.answerDeadline = null;
           broadcastBuzzerState(currentRoom);
@@ -650,6 +629,7 @@ async function startServer() {
           currentRoom.buzzer.openedAt = null;
           currentRoom.buzzer.presses = [];
           currentRoom.buzzer.excludedTeams = [];
+          currentRoom.buzzer.lockedOutUntil = {};
           currentRoom.buzzer.answeringTeamId = null;
           currentRoom.buzzer.answerDeadline = null;
           broadcastBuzzerState(currentRoom);
@@ -659,7 +639,7 @@ async function startServer() {
         if (msg.type === 'BUZZER_JUDGE') {
           if (ws.role === 'remote' && !ws.isAuthenticated) return;
           const result = msg.result === 'incorrect' ? 'incorrect' : 'correct';
-          handleBuzzerJudge(currentRoom, result);
+          handleBuzzerJudge(currentRoom, result, msg.silent === true);
           return;
         }
 
@@ -748,6 +728,7 @@ async function startServer() {
 
           // Case A: Buzzer is CLOSED -> Early press triggers lockout
           if (currentRoom.buzzer.status === 'closed') {
+            if ((currentRoom.buzzer.lockedOutUntil[teamId] || 0) > now) return;
             const lockoutSec = currentRoom.buzzer.config.lockoutSeconds || 2;
             currentRoom.buzzer.lockedOutUntil[teamId] = now + lockoutSec * 1000;
             console.log(`[Master Studio] Pulsación antes de tiempo: ${teamId} bloqueado por ${lockoutSec}s`);
@@ -755,11 +736,10 @@ async function startServer() {
             return;
           }
 
-          // Case B: Team is currently locked out -> Reset lockout countdown
+          // Case B: Team is currently locked out -> ignore the press.
+          // (Antes cada pulsación reiniciaba el bloqueo: un equipo que pulsaba seguido
+          // quedaba bloqueado indefinidamente.)
           if (currentRoom.buzzer.lockedOutUntil[teamId] && currentRoom.buzzer.lockedOutUntil[teamId] > now) {
-            const lockoutSec = currentRoom.buzzer.config.lockoutSeconds || 2;
-            currentRoom.buzzer.lockedOutUntil[teamId] = now + lockoutSec * 1000;
-            broadcastBuzzerState(currentRoom);
             return;
           }
 
@@ -781,22 +761,9 @@ async function startServer() {
               timestamp: now,
             });
 
-            if (currentRoom.buzzer.config.useBuzzersInGameStage && currentRoom.latestMasterState) {
-              currentRoom.latestMasterState.turn.activeTeamId = teamId;
-              broadcastToRoom(currentRoom.code, {
-                type: 'SYNC_MASTER_STATE',
-                payload: currentRoom.latestMasterState,
-                room: currentRoom.code,
-                timestamp: now,
-              });
-            }
-
+            // El turno lo pasa la consola del director al recibir este estado.
             broadcastBuzzerState(currentRoom);
-
-            if (currentRoom.buzzerAnswerTimer) clearTimeout(currentRoom.buzzerAnswerTimer);
-            currentRoom.buzzerAnswerTimer = setTimeout(() => {
-              handleBuzzerJudge(currentRoom, 'incorrect');
-            }, answerTimeMs);
+            programarTiempoAgotado(currentRoom, answerTimeMs);
             return;
           }
 

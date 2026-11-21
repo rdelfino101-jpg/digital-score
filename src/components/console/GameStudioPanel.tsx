@@ -37,6 +37,10 @@ interface GameStudioPanelProps {
   onAwardActiveTeam: (points: number, actionName: string) => void;
   onTriggerError: () => void;
   onNextTurn: () => void;
+  onBuzzerOpen?: () => void;
+  onBuzzerReset?: () => void;
+  /** Activa o apaga los pulsadores dentro de los juegos (lo guarda el servidor) */
+  onToggleBuzzersInGame?: (activo: boolean) => void;
 }
 
 export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
@@ -46,6 +50,9 @@ export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
   onAwardActiveTeam,
   onTriggerError,
   onNextTurn,
+  onBuzzerOpen,
+  onBuzzerReset,
+  onToggleBuzzersInGame,
 }) => {
   const activeGameId = state.gameStage.activeGameId;
 
@@ -156,6 +163,9 @@ export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
             role="switch"
             aria-checked={Boolean(state.buzzer?.config?.useBuzzersInGameStage)}
             onClick={() => {
+              // Antes este interruptor solo cambiaba la copia local: el servidor nunca se
+              // enteraba y el siguiente estado de pulsadores lo regresaba a «apagado».
+              onToggleBuzzersInGame?.(!(state.buzzer?.config?.useBuzzersInGameStage ?? false));
               onUpdateState((prev) => {
                 const currentUse = prev.buzzer?.config?.useBuzzersInGameStage ?? false;
                 return {
@@ -207,6 +217,10 @@ export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
           )}
         </div>
       </div>
+
+      {state.buzzer?.config?.useBuzzersInGameStage && (
+        <BarraPulsadores state={state} onAbrir={onBuzzerOpen} onReiniciar={onBuzzerReset} />
+      )}
 
       {/* Selector de dinámica: nombres completos, sin cortes */}
       <div className="grid shrink-0 grid-cols-2 gap-1.5 border-b border-[var(--c-line)] p-2.5 @2xl:grid-cols-3 @4xl:grid-cols-5">
@@ -325,6 +339,66 @@ export const GameStudioPanel: React.FC<GameStudioPanelProps> = ({
           />
         )}
       </div>
+    </div>
+  );
+};
+
+/**
+ * Control de pulsadores dentro de Juegos: para no tener que cambiar a la pestaña
+ * Pulsadores en cada pregunta. «Abrir» empieza una pregunta nueva y libera a todos.
+ */
+const BarraPulsadores: React.FC<{
+  state: MasterLiveState;
+  onAbrir?: () => void;
+  onReiniciar?: () => void;
+}> = ({ state, onAbrir, onReiniciar }) => {
+  const b = state.buzzer;
+  const nombre = (id?: string | null) => state.teams.find((t) => t.id === id)?.name || 'Equipo';
+  const excluidos = b?.excludedTeams?.length || 0;
+  const conectados = Object.values(b?.connectedClients || {}).filter((c) => c.connected).length;
+
+  let texto = 'Cerrados';
+  let punto = 'bg-[var(--c-line-strong)]';
+  if (b?.status === 'open') {
+    texto = 'Abiertos: esperando que pulsen';
+    punto = 'bg-emerald-400';
+  } else if (b?.status === 'answering') {
+    texto = `Responde ${nombre(b.answeringTeamId)}`;
+    punto = 'bg-amber-400';
+  }
+
+  return (
+    <div className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-2 border-b border-[var(--c-line)] bg-[var(--c-panel)] px-4 py-2.5">
+      <div className="flex min-w-0 items-center gap-2">
+        <Zap className="h-4 w-4 shrink-0 text-[var(--c-text-3)]" />
+        <span className={`h-2 w-2 shrink-0 rounded-full ${punto}`} aria-hidden />
+        <span className="truncate text-[13px] font-semibold text-[var(--c-text)]">Pulsadores: {texto}</span>
+        <span className="shrink-0 text-[12px] text-[var(--c-text-3)]">
+          · {conectados} {conectados === 1 ? 'celular' : 'celulares'}
+          {excluidos > 0 ? ` · ${excluidos} fuera en esta pregunta` : ''}
+        </span>
+      </div>
+      <div className="ml-auto flex items-center gap-1.5">
+        <button
+          onClick={onAbrir}
+          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-[13px] font-bold text-white transition-colors hover:bg-emerald-500"
+          title="Pregunta nueva: abre los pulsadores para todos los equipos"
+        >
+          Abrir pulsadores
+        </button>
+        <button
+          onClick={onReiniciar}
+          className="rounded-lg border border-[var(--c-line)] bg-[var(--c-panel-2)] px-3 py-1.5 text-[13px] font-semibold text-[var(--c-text-2)] transition-colors hover:text-[var(--c-text)]"
+          title="Cierra los pulsadores y libera a todos los equipos"
+        >
+          Reiniciar
+        </button>
+      </div>
+      {b?.status === 'answering' && (
+        <p className="w-full text-[12px] text-[var(--c-text-3)]">
+          Califica con los botones del juego: «Correcto» cierra el pulsador y «Fallo» le pasa la palabra al siguiente que pulsó.
+        </p>
+      )}
     </div>
   );
 };
