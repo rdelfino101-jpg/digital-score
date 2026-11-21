@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BuzzerServerState, StudioTeam } from '../../types/masterStudio';
-import { Zap, Clock, Users, CheckCircle2, XCircle } from 'lucide-react';
+import { Zap, Clock, Users } from 'lucide-react';
 import { formatMsDiff } from '../../utils/buzzerRules';
 
 interface BuzzerProjectorOverlayProps {
@@ -29,9 +29,9 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
   if (status === 'open') {
     return (
       <div className="absolute top-16 left-1/2 -translate-x-1/2 z-40 pointer-events-none animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-3 px-8 py-3 rounded-full bg-amber-500 text-slate-950 font-black text-2xl tracking-wider uppercase shadow-[0_0_50px_rgba(245,158,11,0.8)] border-4 border-yellow-200 animate-pulse">
-          <Zap className="w-8 h-8 fill-current text-slate-950 animate-bounce" />
-          <span>⚡ PULSADORES ABIERTOS · ¡PULSA AHORA!</span>
+        <div className="flex items-center gap-3 px-8 py-3 rounded-full bg-[var(--p-accent)] text-[var(--p-on-accent)] font-black text-2xl tracking-wider uppercase shadow-lg border-2 border-[var(--p-line-strong)] animate-pulse">
+          <Zap className="w-8 h-8 fill-current animate-bounce" />
+          <span>PULSADORES ABIERTOS · ¡PULSA AHORA!</span>
         </div>
       </div>
     );
@@ -58,28 +58,28 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
     const unpressedTeams = teams.filter((t) => !pressedTeamIds.has(t.id));
 
     return (
-      <div className="absolute inset-0 z-50 bg-[#070814]/90 backdrop-blur-md flex flex-col p-14 animate-in fade-in zoom-in-95 duration-200 select-none">
+      <div className="absolute inset-0 z-50 bg-[var(--p-bg)] flex flex-col p-14 animate-in fade-in zoom-in-95 duration-200 select-none">
         {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-white/10 pb-6 mb-8">
+        <div className="flex items-center justify-between border-b-2 border-[var(--p-line)] pb-6 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-slate-950 shadow-lg shadow-amber-500/40">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--p-accent)] flex items-center justify-center text-[var(--p-on-accent)] shadow-md">
               <Zap className="w-7 h-7 fill-current" />
             </div>
             <div>
-              <h1 className="text-4xl font-black text-white tracking-wide uppercase">
+              <h1 className="font-projector-title text-4xl text-[var(--p-text)]">
                 ¿Quién pulsó primero?
               </h1>
-              <p className="text-lg text-slate-400 font-medium">
+              <p className="text-lg text-[var(--p-text-2)] font-medium">
                 Pulsadores inalámbricos sincronizados en tiempo real
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold uppercase tracking-wider text-slate-400">
+            <span className="text-xl font-bold uppercase tracking-wider text-[var(--p-text-2)]">
               Tiempo para responder:
             </span>
-            <div className="px-6 py-2 rounded-2xl bg-slate-900 border-2 border-amber-400 text-amber-300 font-mono font-black text-4xl shadow-[0_0_25px_rgba(251,191,36,0.3)]">
+            <div className="px-6 py-2 rounded-2xl bg-[var(--p-panel)] border-2 border-[var(--p-accent-ink)] text-[var(--p-accent-ink)] font-mono font-black text-4xl shadow-sm">
               {secRemaining}s
             </div>
           </div>
@@ -89,50 +89,53 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
         <div className="flex-1 grid grid-cols-12 gap-8 items-stretch min-h-0">
           {/* Left Column (7 cols): Giant Card for First Place */}
           <div
-            className="col-span-7 rounded-3xl p-10 flex flex-col justify-between border-4 shadow-2xl relative overflow-hidden transition-all duration-300"
+            className="col-span-7 rounded-3xl p-10 flex flex-col justify-between border-4 bg-[var(--p-panel)] shadow-lg relative overflow-hidden transition-all duration-300"
             style={{
-              backgroundColor: `${answeringTeam.color}22`,
               borderColor: answeringTeam.color,
-              boxShadow: `0 0 80px ${answeringTeam.color}44`,
             }}
           >
-            {/* Background glowing aura */}
+            {/* Team Color Top Bar */}
             <div
-              className="absolute -right-20 -top-20 w-80 h-80 rounded-full blur-3xl opacity-30 pointer-events-none"
+              className="absolute top-0 left-0 right-0 h-4"
               style={{ backgroundColor: answeringTeam.color }}
             />
 
-            <div>
-              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-amber-400 text-slate-950 font-black text-xl tracking-wider uppercase mb-6 shadow-lg shadow-amber-400/30">
+            <div className="pt-2">
+              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[var(--p-accent)] text-[var(--p-on-accent)] font-black text-xl tracking-wider uppercase mb-6 shadow-sm">
                 <Zap className="w-6 h-6 fill-current" />
                 <span>PRIMER LUGAR</span>
               </div>
 
               {/* Huge team name */}
               <div
-                className="font-black text-white leading-none tracking-tight break-words drop-shadow-2xl"
+                className="font-black text-[var(--p-text)] leading-none tracking-tight break-words"
                 style={{ fontSize: '132px' }}
               >
                 {answeringTeam.name}
               </div>
 
-              <div className="text-4xl font-extrabold text-white/90 uppercase tracking-widest mt-4 flex items-center gap-3">
+              <div className="text-4xl font-extrabold text-[var(--p-text-2)] tracking-wide mt-4 flex items-center gap-3">
                 <span>¡Tienen la palabra!</span>
               </div>
             </div>
 
             {/* Bottom timer progress bar */}
             <div className="mt-8">
-              <div className="flex items-center justify-between text-lg font-bold text-slate-300 mb-2">
+              <div className="flex items-center justify-between text-lg font-bold text-[var(--p-text-2)] mb-2">
                 <span>Cuenta regresiva</span>
-                <span className="font-mono text-amber-300 text-2xl font-black">{secRemaining}s</span>
+                <span className="font-mono text-[var(--p-accent-ink)] text-2xl font-black">{secRemaining}s</span>
               </div>
-              <div className="w-full h-5 rounded-full bg-slate-950/80 border border-white/20 p-1 overflow-hidden shadow-inner">
+              <div className="w-full h-5 rounded-full bg-[var(--p-panel-2)] border border-[var(--p-line)] p-1 overflow-hidden">
                 <div
-                  className="h-full rounded-full transition-all duration-100 ease-linear shadow-lg"
+                  className="h-full rounded-full transition-all duration-100 ease-linear"
                   style={{
                     width: `${progressPct}%`,
-                    backgroundColor: progressPct < 30 ? '#ef4444' : progressPct < 60 ? '#f59e0b' : '#10b981',
+                    backgroundColor:
+                      progressPct < 30
+                        ? 'var(--p-err)'
+                        : progressPct < 60
+                        ? 'var(--p-accent)'
+                        : 'var(--p-ok)',
                   }}
                 />
               </div>
@@ -142,9 +145,9 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
           {/* Right Column (5 cols): 2nd, 3rd place and unpressed teams */}
           <div className="col-span-5 flex flex-col justify-between gap-6">
             {/* Subsequent pressed places */}
-            <div className="bg-slate-900/80 border-2 border-slate-700/60 rounded-3xl p-6 shadow-xl flex-1 flex flex-col">
-              <div className="flex items-center gap-2 text-slate-400 font-bold uppercase tracking-wider text-sm mb-4 pb-2 border-b border-slate-800">
-                <Clock className="w-4 h-4 text-amber-400" />
+            <div className="bg-[var(--p-panel)] border-2 border-[var(--p-line)] rounded-3xl p-6 shadow-md flex-1 flex flex-col">
+              <div className="flex items-center gap-2 text-[var(--p-text-2)] font-bold uppercase tracking-wider text-sm mb-4 pb-2 border-b border-[var(--p-line)]">
+                <Clock className="w-4 h-4 text-[var(--p-accent-ink)]" />
                 <span>Orden de pulsación siguiente</span>
               </div>
 
@@ -163,29 +166,29 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
                         key={press.teamId}
                         className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
                           isExcl
-                            ? 'bg-red-950/30 border-red-900/40 opacity-50'
-                            : 'bg-slate-800/90 border-slate-700/80 shadow-md'
+                            ? 'bg-[var(--p-err-bg)] border-[var(--p-err)] opacity-65'
+                            : 'bg-[var(--p-panel-2)] border-[var(--p-line)] shadow-sm'
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <span className="w-9 h-9 rounded-xl bg-slate-700/80 font-black text-lg text-amber-300 flex items-center justify-center border border-white/10">
+                          <span className="w-9 h-9 rounded-xl bg-[var(--p-panel)] font-black text-lg text-[var(--p-accent-ink)] flex items-center justify-center border border-[var(--p-line)]">
                             {idx + 2}º
                           </span>
                           <span
                             className="w-4 h-4 rounded-full flex-shrink-0"
                             style={{ backgroundColor: pressTeam.color }}
                           />
-                          <span className="font-black text-xl text-white truncate max-w-[200px]">
+                          <span className="font-black text-xl text-[var(--p-text)] truncate max-w-[200px]">
                             {pressTeam.name}
                           </span>
                         </div>
 
                         <div className="text-right">
-                          <span className="font-mono text-lg font-black text-amber-300">
+                          <span className="font-mono text-lg font-black text-[var(--p-accent-ink)]">
                             {formatMsDiff(press.msAfterFirst)}
                           </span>
                           {isExcl && (
-                            <span className="block text-[11px] font-bold text-red-400 uppercase">
+                            <span className="block text-[11px] font-bold text-[var(--p-err)] uppercase">
                               Excluido
                             </span>
                           )}
@@ -194,8 +197,8 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
                     );
                   })
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-500 py-6">
-                    <Users className="w-8 h-8 mb-2 opacity-40" />
+                  <div className="h-full flex flex-col items-center justify-center text-[var(--p-text-3)] py-6">
+                    <Users className="w-8 h-8 mb-2 opacity-50" />
                     <span className="text-sm font-semibold">Ningún otro equipo pulsó en esta ronda</span>
                   </div>
                 )}
@@ -203,8 +206,8 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
             </div>
 
             {/* Unpressed Teams */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-3xl p-5 shadow-lg">
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+            <div className="bg-[var(--p-panel)] border-2 border-[var(--p-line)] rounded-3xl p-5 shadow-sm">
+              <div className="text-xs font-bold uppercase tracking-wider text-[var(--p-text-3)] mb-3">
                 Sin pulsar en esta pregunta
               </div>
               <div className="flex flex-wrap gap-2">
@@ -212,14 +215,14 @@ export const BuzzerProjectorOverlay: React.FC<BuzzerProjectorOverlayProps> = ({
                   unpressedTeams.map((t) => (
                     <div
                       key={t.id}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-800/80 border border-slate-700 text-sm font-bold text-slate-300"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--p-panel-2)] border border-[var(--p-line)] text-sm font-bold text-[var(--p-text-2)]"
                     >
                       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: t.color }} />
                       <span>{t.name}</span>
                     </div>
                   ))
                 ) : (
-                  <span className="text-xs text-slate-400 font-medium italic">Todos los equipos pulsaron</span>
+                  <span className="text-xs text-[var(--p-text-3)] font-medium italic">Todos los equipos pulsaron</span>
                 )}
               </div>
             </div>

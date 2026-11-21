@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 interface AnimatedScoreProps {
   score: number;
   className?: string;
+  style?: React.CSSProperties;
   durationMs?: number;
   prefix?: string;
   suffix?: string;
@@ -11,6 +12,7 @@ interface AnimatedScoreProps {
 export const AnimatedScore: React.FC<AnimatedScoreProps> = ({
   score,
   className = '',
+  style,
   durationMs = 500,
   prefix = '',
   suffix = '',
@@ -59,6 +61,7 @@ export const AnimatedScore: React.FC<AnimatedScoreProps> = ({
 
   return (
     <span
+      style={style}
       className={`tabular-numbers inline-block transition-transform duration-300 ${
         isFlashing ? 'animate-projector-score-flash' : ''
       } ${className}`}

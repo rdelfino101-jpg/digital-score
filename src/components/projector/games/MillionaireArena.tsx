@@ -1,7 +1,7 @@
 import React from 'react';
 import { MillionaireGameState } from '../../../types/masterStudio';
 import { AnswerOption } from '../common/AnswerOption';
-import { Zap, Users, PhoneCall, Shuffle, ShieldCheck, CheckCircle2, Trophy, Clock } from 'lucide-react';
+import { Zap, Users, PhoneCall, Shuffle, ShieldCheck, Trophy, Clock } from 'lucide-react';
 
 interface MillionaireArenaProps {
   stage: MillionaireGameState;
@@ -36,40 +36,47 @@ export const MillionaireArena: React.FC<MillionaireArenaProps> = ({ stage }) => 
   if (!item) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-12">
-        <Trophy className="w-24 h-24 text-[#FFC53D] mb-6 opacity-80" />
-        <h2 className="font-projector-title text-[54px] text-white mb-3">¿QUIÉN QUIERE SER MILLONARIO?</h2>
-        <p className="font-projector text-[28px] font-bold text-[#B8BCE6] uppercase tracking-wider">COMPETICIÓN EN VIVO</p>
+        <Trophy className="w-24 h-24 text-[var(--p-accent-ink)] mb-6 opacity-80" />
+        <h2 className="font-projector-title text-[54px] text-[var(--p-text)] mb-3">¿Quién quiere ser millonario?</h2>
+        <p className="font-projector text-[28px] font-bold text-[var(--p-text-2)] uppercase tracking-wider">Competición en vivo</p>
       </div>
     );
   }
 
+  const lifelinesConfig = [
+    { key: 'fiftyFifty' as const, label: '50:50', icon: Zap },
+    { key: 'audiencePoll' as const, label: 'Público', icon: Users },
+    { key: 'phoneCall' as const, label: 'Llamada', icon: PhoneCall },
+    { key: 'switchQuestion' as const, label: 'Cambio', icon: Shuffle },
+  ];
+
   return (
     <div className="flex h-full gap-8">
-      {/* Left Column: Game Area (Question, Options, Lifelines, Overlays) */}
+      {/* Left Column: Game Area */}
       <div className="flex-1 flex flex-col justify-between h-full gap-5">
         {/* Top bar: Question Level & Accumulated Pot */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="px-6 py-2.5 rounded-full bg-[#1C1F47] border-2 border-[#FFC53D] text-[#FFC53D] font-black text-[24px] uppercase tracking-wider">
+            <span className="px-6 py-2.5 rounded-full bg-[var(--p-brand)] text-[var(--p-on-brand)] font-black text-[24px] uppercase tracking-wider">
               NIVEL {currentLvl} DE 15
             </span>
-            <span className="px-6 py-2.5 rounded-full bg-[#15173A] border border-[#2A2D5C] text-white font-bold text-[24px]">
+            <span className="px-6 py-2.5 rounded-full bg-[var(--p-panel)] border border-[var(--p-line)] text-[var(--p-text)] font-bold text-[24px]">
               POR {item.points?.toLocaleString() || '100'} PUNTOS
             </span>
           </div>
 
-          <div className="px-6 py-2 rounded-2xl bg-[#3A2A05] border-2 border-[#FFC53D] text-[#FFC53D] font-black text-[22px]">
+          <div className="px-6 py-2 rounded-2xl bg-[var(--p-accent-soft)] border-2 border-[var(--p-accent-ink)] text-[var(--p-accent-ink)] font-black text-[22px]">
             Acumulado: {stage.accumulatedPoints?.toLocaleString() || 0} PTS
           </div>
         </div>
 
-        {/* Modal/Overlay for Audience Poll if active */}
+        {/* Overlay for Audience Poll if active */}
         {stage.showAudiencePoll && stage.audiencePollResults && (
-          <div className="w-full p-6 rounded-3xl bg-[#15173A] border-4 border-[#4F7BFF] animate-in zoom-in-95">
-            <div className="flex items-center gap-3 text-[#4F7BFF] mb-4">
+          <div className="w-full p-6 rounded-3xl bg-[var(--p-panel)] border-4 border-[var(--p-brand)] shadow-md animate-in zoom-in-95">
+            <div className="flex items-center gap-3 text-[var(--p-accent-ink)] mb-4">
               <Users className="w-8 h-8" />
               <span className="text-[24px] font-black tracking-widest uppercase">
-                VOTACIÓN DEL PÚBLICO EN TIEMPO REAL
+                Votación del público en tiempo real
               </span>
             </div>
             <div className="grid grid-cols-4 gap-4">
@@ -77,14 +84,14 @@ export const MillionaireArena: React.FC<MillionaireArenaProps> = ({ stage }) => 
                 const percent = stage.audiencePollResults?.[key] ?? 25;
                 return (
                   <div key={key} className="flex flex-col items-center gap-2">
-                    <span className="text-[32px] font-black text-white">{percent}%</span>
-                    <div className="w-full h-28 bg-[#1C1F47] rounded-xl overflow-hidden flex flex-col justify-end p-1 border border-[#2A2D5C]">
+                    <span className="text-[32px] font-black text-[var(--p-text)]">{percent}%</span>
+                    <div className="w-full h-28 bg-[var(--p-panel-2)] rounded-xl overflow-hidden flex flex-col justify-end p-1 border border-[var(--p-line)]">
                       <div
-                        className="w-full bg-[#4F7BFF] rounded-lg transition-all duration-500"
+                        className="w-full bg-[var(--p-brand)] rounded-lg transition-all duration-500"
                         style={{ height: `${percent}%` }}
                       />
                     </div>
-                    <span className="text-[26px] font-black text-[#FFC53D]">OPCIÓN {key}</span>
+                    <span className="text-[26px] font-black text-[var(--p-accent-ink)]">OPCIÓN {key}</span>
                   </div>
                 );
               })}
@@ -92,25 +99,25 @@ export const MillionaireArena: React.FC<MillionaireArenaProps> = ({ stage }) => 
           </div>
         )}
 
-        {/* Modal/Overlay for Phone Call if active */}
+        {/* Overlay for Phone Call if active */}
         {stage.showPhoneCall && (
-          <div className="w-full p-6 rounded-3xl bg-[#15173A] border-4 border-[#FF8A1F] flex items-center justify-between animate-in zoom-in-95">
+          <div className="w-full p-6 rounded-3xl bg-[var(--p-panel)] border-4 border-[var(--p-accent-ink)] shadow-md flex items-center justify-between animate-in zoom-in-95">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-[#FF8A1F]/20 border-2 border-[#FF8A1F] text-[#FF8A1F] flex items-center justify-center animate-pulse">
+              <div className="w-16 h-16 rounded-2xl bg-[var(--p-accent)] text-[var(--p-on-accent)] flex items-center justify-center animate-pulse">
                 <PhoneCall className="w-10 h-10" />
               </div>
               <div>
-                <span className="text-[22px] font-black text-[#FF8A1F] uppercase tracking-wider block">
-                  LLAMADA AL EXPERTO ACTIVA
+                <span className="text-[22px] font-black text-[var(--p-accent-ink)] uppercase tracking-wider block">
+                  Llamada al experto activa
                 </span>
-                <span className="text-[26px] text-[#B8BCE6] font-semibold">
+                <span className="text-[26px] text-[var(--p-text-2)] font-semibold">
                   El participante está consultando con su contacto telefónico
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-8 py-3 rounded-2xl bg-[#1C1F47] border-2 border-[#FF8A1F]">
-              <Clock className="w-8 h-8 text-[#FF8A1F]" />
-              <span className="text-[52px] font-black text-white tabular-numbers">
+            <div className="flex items-center gap-3 px-8 py-3 rounded-2xl bg-[var(--p-panel-2)] border-2 border-[var(--p-accent-ink)]">
+              <Clock className="w-8 h-8 text-[var(--p-accent-ink)]" />
+              <span className="text-[52px] font-black text-[var(--p-text)] tabular-numbers">
                 {stage.phoneCallSecondsRemaining ?? 30}s
               </span>
             </div>
@@ -119,12 +126,12 @@ export const MillionaireArena: React.FC<MillionaireArenaProps> = ({ stage }) => 
 
         {/* Question Text in 52px */}
         <div className="flex-1 flex items-center justify-center px-6 py-2">
-          <h2 className="text-[52px] font-black leading-[1.14] text-white text-center max-w-5xl tracking-tight drop-shadow-md">
+          <h2 className="text-[52px] font-black leading-[1.14] text-[var(--p-text)] text-center max-w-5xl tracking-tight">
             {item.question}
           </h2>
         </div>
 
-        {/* 2x2 Options Grid with AnswerOption (124px height) */}
+        {/* 2x2 Options Grid */}
         <div className="grid grid-cols-2 gap-4 w-full">
           {optionKeys.map((key) => {
             const text = item.options[key];
@@ -156,63 +163,33 @@ export const MillionaireArena: React.FC<MillionaireArenaProps> = ({ stage }) => 
           })}
         </div>
 
-        {/* Lifelines Row below options: crossed out if used */}
+        {/* Lifelines Row */}
         <div className="grid grid-cols-4 gap-4 w-full pt-1">
-          {/* 50:50 */}
-          <div
-            className={`flex items-center justify-center gap-3 py-3 rounded-2xl border-2 transition-all ${
-              stage.lifelines?.fiftyFifty
-                ? 'bg-[#15173A]/40 border-[#2A2D5C] text-[#B8BCE6]/40 line-through'
-                : 'bg-[#15173A] border-[#FFC53D] text-[#FFC53D] shadow-lg shadow-[#FFC53D]/10'
-            }`}
-          >
-            <Zap className="w-6 h-6 shrink-0" />
-            <span className="text-[20px] font-black tracking-wider uppercase">50:50</span>
-          </div>
-
-          {/* Público */}
-          <div
-            className={`flex items-center justify-center gap-3 py-3 rounded-2xl border-2 transition-all ${
-              stage.lifelines?.audiencePoll
-                ? 'bg-[#15173A]/40 border-[#2A2D5C] text-[#B8BCE6]/40 line-through'
-                : 'bg-[#15173A] border-[#4F7BFF] text-[#4F7BFF] shadow-lg shadow-[#4F7BFF]/10'
-            }`}
-          >
-            <Users className="w-6 h-6 shrink-0" />
-            <span className="text-[20px] font-black tracking-wider uppercase">Público</span>
-          </div>
-
-          {/* Llamada */}
-          <div
-            className={`flex items-center justify-center gap-3 py-3 rounded-2xl border-2 transition-all ${
-              stage.lifelines?.phoneCall
-                ? 'bg-[#15173A]/40 border-[#2A2D5C] text-[#B8BCE6]/40 line-through'
-                : 'bg-[#15173A] border-[#FF8A1F] text-[#FF8A1F] shadow-lg shadow-[#FF8A1F]/10'
-            }`}
-          >
-            <PhoneCall className="w-6 h-6 shrink-0" />
-            <span className="text-[20px] font-black tracking-wider uppercase">Llamada</span>
-          </div>
-
-          {/* Cambio */}
-          <div
-            className={`flex items-center justify-center gap-3 py-3 rounded-2xl border-2 transition-all ${
-              stage.lifelines?.switchQuestion
-                ? 'bg-[#15173A]/40 border-[#2A2D5C] text-[#B8BCE6]/40 line-through'
-                : 'bg-[#15173A] border-[#E04FD8] text-[#E04FD8] shadow-lg shadow-[#E04FD8]/10'
-            }`}
-          >
-            <Shuffle className="w-6 h-6 shrink-0" />
-            <span className="text-[20px] font-black tracking-wider uppercase">Cambio</span>
-          </div>
+          {lifelinesConfig.map((lf) => {
+            const Icon = lf.icon;
+            const isUsed = Boolean(stage.lifelines?.[lf.key]);
+            return (
+              <div
+                key={lf.key}
+                className={`flex items-center justify-center gap-3 py-3 rounded-2xl border-2 transition-all ${
+                  isUsed
+                    ? 'bg-[var(--p-panel-2)] border-[var(--p-line)] text-[var(--p-text-3)] line-through opacity-50'
+                    : 'bg-[var(--p-panel)] border-[var(--p-accent-ink)] text-[var(--p-accent-ink)] shadow-sm'
+                }`}
+              >
+                <Icon className="w-6 h-6 shrink-0" />
+                <span className="text-[20px] font-black tracking-wider uppercase">{lf.label}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Right Column: 15-Level Ladder (46px row height) */}
-      <div className="w-[380px] flex flex-col justify-between rounded-3xl bg-[#15173A] border-2 border-[#2A2D5C] p-3 shadow-2xl shrink-0">
-        <div className="text-center py-1.5 border-b border-[#2A2D5C]">
-          <span className="text-[18px] font-black tracking-widest text-[#B8BCE6] uppercase">
-            ESCALERA DE PREMIOS
+      {/* Right Column: 15-Level Ladder */}
+      <div className="w-[380px] flex flex-col justify-between rounded-3xl bg-[var(--p-panel)] border-2 border-[var(--p-line)] p-3 shadow-md shrink-0">
+        <div className="text-center py-1.5 border-b border-[var(--p-line)]">
+          <span className="text-[18px] font-black tracking-widest text-[var(--p-text-2)] uppercase">
+            Escalera de premios
           </span>
         </div>
 
@@ -223,13 +200,13 @@ export const MillionaireArena: React.FC<MillionaireArenaProps> = ({ stage }) => 
             const isSafeHaven = safeHavens.has(step.level);
             const isTopPrize = step.level === 15;
 
-            let rowStyle = 'bg-[#1C1F47]/50 text-[#B8BCE6] border-transparent';
+            let rowStyle = 'bg-[var(--p-panel-2)] text-[var(--p-text-2)] border-transparent';
             if (isCurrent) {
-              rowStyle = 'bg-[#3A2A05] border-2 border-[#FFC53D] text-[#FFC53D] shadow-lg scale-105 z-10';
+              rowStyle = 'bg-[var(--p-accent)] text-[var(--p-on-accent)] border-2 border-[var(--p-accent-ink)] shadow-sm scale-[1.03] z-10';
             } else if (isPassed) {
-              rowStyle = 'bg-[#0F5132]/60 text-[#4ADE80] border-transparent';
+              rowStyle = 'bg-[var(--p-ok-bg)] text-[var(--p-ok)] border-transparent';
             } else if (isSafeHaven) {
-              rowStyle = 'bg-[#1C1F47] border-2 border-[#4F7BFF] text-white';
+              rowStyle = 'bg-[var(--p-brand)] text-[var(--p-on-brand)] border-transparent';
             }
 
             return (
@@ -243,13 +220,27 @@ export const MillionaireArena: React.FC<MillionaireArenaProps> = ({ stage }) => 
                     {step.level}
                   </span>
                   {isSafeHaven && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#4F7BFF]/30 text-[#4F7BFF] text-[13px] font-black uppercase tracking-wider">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[13px] font-black uppercase tracking-wider ${
+                        isCurrent
+                          ? 'bg-black/15 text-[var(--p-on-accent)]'
+                          : isPassed
+                          ? 'bg-[var(--p-panel)] text-[var(--p-ok)]'
+                          : 'bg-white/15 text-[var(--p-on-brand)]'
+                      }`}
+                    >
                       <ShieldCheck className="w-3.5 h-3.5" />
                       Seguro
                     </span>
                   )}
                   {isTopPrize && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#FFC53D]/30 text-[#FFC53D] text-[13px] font-black uppercase tracking-wider">
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[13px] font-black uppercase tracking-wider ${
+                        isCurrent
+                          ? 'bg-black/15 text-[var(--p-on-accent)]'
+                          : 'bg-[var(--p-accent-soft)] text-[var(--p-accent-ink)]'
+                      }`}
+                    >
                       <Trophy className="w-3.5 h-3.5" />
                       Meta
                     </span>

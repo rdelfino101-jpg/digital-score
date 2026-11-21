@@ -6,6 +6,8 @@ import {
 } from '../../types/masterStudio';
 import { MasterProjectorView } from '../MasterProjectorView';
 import { studioAudio } from '../../utils/audioSynth';
+import { resolveEventBrand } from '../../styles/eventBrand';
+import { nombreEscena } from '../../utils/textosInterfaz';
 import {
   Tv,
   Gamepad2,
@@ -150,8 +152,8 @@ export const MasterBroadcastSidebar: React.FC<MasterBroadcastSidebarProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 text-amber-400">
-              {masterState.viewMode}
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-amber-400">
+              {nombreEscena(masterState.viewMode)}
             </span>
             <button
               onClick={onOpenProjector}
@@ -175,18 +177,19 @@ export const MasterBroadcastSidebar: React.FC<MasterBroadcastSidebarProps> = ({
           </div>
         </div>
 
-        {/* Quick Theme & Background Trigger */}
+        {/* Quick Brand & Background Trigger */}
         <button
           onClick={onOpenThemeModal}
-          className="w-full mt-2.5 py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-purple-500/50 text-slate-200 hover:text-white text-xs font-bold flex items-center justify-between transition-all group shadow-sm"
-          title="Personalizar los 9 temas o imagen de fondo del proyector"
+          className="w-full mt-2.5 py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-purple-500/50 text-slate-200 hover:text-white text-xs font-bold flex items-center justify-between gap-2 transition-all group shadow-sm"
+          title="Editar nombre, logo, colores y fondo del proyector"
         >
-          <div className="flex items-center gap-1.5">
-            <Palette className="w-3.5 h-3.5 text-purple-400 group-hover:rotate-12 transition-transform" strokeWidth={2.2} />
-            <span className="text-[11px] text-slate-300">Tema Proyector:</span>
-            <span className="text-[11px] font-extrabold text-white capitalize">{masterState.scene.theme}</span>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Palette className="w-3.5 h-3.5 shrink-0 text-purple-400 group-hover:rotate-12 transition-transform" strokeWidth={2.2} />
+            <span className="text-[11px] text-slate-200 truncate">
+              Marca: <strong className="font-extrabold text-white">{resolveEventBrand(masterState.scene.eventBrand).name}</strong>
+            </span>
           </div>
-          <span className="text-[10px] text-purple-300 font-mono">Cambiar 🎨</span>
+          <span className="text-[10px] text-purple-300 font-bold shrink-0">Editar</span>
         </button>
       </div>
 

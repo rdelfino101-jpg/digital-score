@@ -136,7 +136,7 @@ export const DirectorHeader: React.FC<DirectorHeaderProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-extrabold text-xs sm:text-sm tracking-wider text-white uppercase font-sans whitespace-nowrap">
-                Master Studio Pro
+                Scoreboard Studio
               </span>
               <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-red-600 text-white animate-pulse">
                 AL AIRE

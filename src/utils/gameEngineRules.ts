@@ -130,7 +130,7 @@ export function createInitialMasterLiveState(): MasterLiveState {
     celebrationActive: false,
     celebrationWinner: null,
     tickerActive: true,
-    tickerMessage: '¡Bienvenidos a Live Event & Game Show Master Studio! Todo en vivo.',
+    tickerMessage: '¡Bienvenidos! Que comience la competencia.',
   };
 
   const gameStage: GameStageState = {

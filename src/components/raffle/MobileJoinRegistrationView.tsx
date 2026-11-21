@@ -337,7 +337,7 @@ export const MobileJoinRegistrationView: React.FC = () => {
 
       {/* Footer */}
       <footer className="text-center py-2 text-[12px] text-slate-500 border-t border-[#2A2D5C]">
-        Live Event & Game Show Master Studio • Centro de Sorteos
+        Scoreboard Studio • Centro de Sorteos
       </footer>
     </div>
   );

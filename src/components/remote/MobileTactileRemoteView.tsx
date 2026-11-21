@@ -45,6 +45,7 @@ import {
   X,
 } from 'lucide-react';
 import { formatTimeDisplay } from '../../utils/gameEngineRules';
+import { mensajeErrorRemoto } from '../../utils/textosInterfaz';
 
 interface MobileTactileRemoteViewProps {
   masterState: MasterLiveState | null;
@@ -71,7 +72,7 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
   const [activeTab, setActiveTab] = useState<'points' | 'scenes' | 'games' | 'sounds' | 'buzzers'>('points');
   const [showPinModal, setShowPinModal] = useState<boolean>(!isAuthenticated);
   const [pinInput, setPinInput] = useState('');
-  const [localPinError, setLocalPinError] = useState<string | null>(null);
+  const [localPinError, setLocalPinError] = useState<string | null>(() => mensajeErrorRemoto(authError));
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -82,7 +83,7 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
 
   useEffect(() => {
     if (authError) {
-      setLocalPinError(authError);
+      setLocalPinError(mensajeErrorRemoto(authError));
     }
   }, [authError]);
 
@@ -906,7 +907,7 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
 
               {localPinError && (
                 <div className="p-2 rounded-xl bg-red-950/80 border border-red-500/40 text-red-300 text-xs font-medium">
-                  {localPinError}
+                  {mensajeErrorRemoto(localPinError) || localPinError}
                 </div>
               )}
 

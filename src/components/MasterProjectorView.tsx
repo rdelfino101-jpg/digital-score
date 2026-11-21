@@ -6,14 +6,14 @@ import { ScoreboardViewDisplay } from './projector/ScoreboardViewDisplay';
 import { PodiumCelebrationDisplay } from './projector/PodiumCelebrationDisplay';
 import { RaffleStageDisplay } from './projector/raffle/RaffleStageDisplay';
 import { BuzzerProjectorOverlay } from './projector/BuzzerProjectorOverlay';
-import { Radio, Flame, ArrowLeft, RadioTower, Maximize, Minimize, Clock, Trophy } from 'lucide-react';
+import { ArrowLeft, RadioTower, Maximize, Minimize, Clock } from 'lucide-react';
 import { useScreenWakeLock } from '../utils/wakeLock';
 import { useProjectorScale } from '../hooks/useProjectorScale';
 import { formatTimeDisplay, rankStudioTeams } from '../utils/gameEngineRules';
-import {
-  PROJECTOR_DEFAULT_THEME,
-  PROJECTOR_HIGH_CONTRAST_THEME,
-} from '../styles/projectorTheme';
+import { resolveEventBrand, brandCssVars } from '../styles/eventBrand';
+import { ProjectorBrandContext, useProjectorBrand } from './projector/common/brandContext';
+import { BrandMark } from './projector/common/BrandMark';
+import { FitText } from './projector/common/FitText';
 
 interface MasterProjectorViewProps {
   masterState: MasterLiveState | null;
@@ -86,12 +86,11 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
     }
   };
 
-  // High contrast theme detection (pure black background, #111 panels, white borders)
-  const isHighContrast =
-    masterState?.scene.theme === 'high-contrast' ||
-    (masterState?.scene.theme === 'custom' && (!masterState.scene.customBgImage || masterState.scene.customBgImage === ''));
+  // High contrast theme detection (when theme is 'high-contrast')
+  const isHighContrast = masterState?.scene.theme === 'high-contrast';
 
-  const themeTokens = isHighContrast ? PROJECTOR_HIGH_CONTRAST_THEME : PROJECTOR_DEFAULT_THEME;
+  const brand = resolveEventBrand(masterState?.scene.eventBrand);
+  const brandVars = brandCssVars(brand, isHighContrast);
 
   // Custom Background Image support
   const customBgImage = masterState?.scene.customBgImage || '';
@@ -100,22 +99,37 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
 
   // If state is not loaded yet, show standby connecting screen
   if (!masterState) {
+    const waitingVars = brandCssVars(null, false);
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#0A0B1E] p-12 text-center select-none font-projector">
-        <div className="mb-6 flex h-28 w-28 items-center justify-center rounded-3xl border-2 border-[#2A2D5C] bg-[#15173A] text-blue-400 shadow-2xl">
+      <div
+        className="flex h-screen w-screen flex-col items-center justify-center p-12 text-center select-none font-projector"
+        style={{
+          ...(waitingVars as React.CSSProperties),
+          backgroundColor: 'var(--p-bg)',
+          color: 'var(--p-text)',
+        }}
+      >
+        <div
+          className="mb-6 flex h-28 w-28 items-center justify-center rounded-3xl border-2 shadow-lg"
+          style={{
+            borderColor: 'var(--p-line)',
+            backgroundColor: 'var(--p-panel)',
+            color: 'var(--p-brand)',
+          }}
+        >
           <RadioTower className="h-16 w-16 animate-pulse" />
         </div>
-        <h2 className="font-projector-title text-[48px] text-white">
-          CONECTANDO CON LA SALA DE TRANSMISIÓN...
+        <h2 className="font-projector-title text-[48px]" style={{ color: 'var(--p-text)' }}>
+          Conectando con la consola…
         </h2>
-        <p className="mt-3 text-[24px] text-[#B8BCE6] font-medium">
-          Esperando señal sincronizada de la consola del director
+        <p className="mt-3 text-[24px] font-medium" style={{ color: 'var(--p-text-2)' }}>
+          La pantalla aparecerá en cuanto la consola del director esté abierta.
         </p>
       </div>
     );
   }
 
-  const { viewMode, scene, hudToggles, timer, teams, scoreboard, gameStage } = masterState;
+  const { viewMode, scene, hudToggles } = masterState;
 
   return (
     <div
@@ -136,6 +150,7 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
         id="projector-canvas"
         className="relative flex flex-col justify-between overflow-hidden shadow-2xl"
         style={{
+          ...(brandVars as React.CSSProperties),
           width: '1920px',
           height: '1080px',
           minWidth: '1920px',
@@ -143,8 +158,8 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
           transform: `scale(${scale})`,
           transformOrigin: 'center center',
           padding: '54px 96px',
-          backgroundColor: themeTokens.background,
-          color: themeTokens.text,
+          backgroundColor: 'var(--p-bg)',
+          color: 'var(--p-text)',
         }}
       >
         {/* CUSTOM BACKGROUND IMAGE LAYER */}
@@ -165,14 +180,6 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
           </div>
         )}
 
-        {/* BROADCAST AMBIENT GLOW (Only on non-high-contrast) */}
-        {!isHighContrast && (
-          <>
-            <div className="pointer-events-none absolute -top-40 -left-40 h-[600px] w-[600px] rounded-full bg-blue-600/10 blur-[140px]" />
-            <div className="pointer-events-none absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-indigo-600/10 blur-[140px]" />
-          </>
-        )}
-
         {/* FLOATING UPPER CONTROLS (AUTO-HIDES AFTER 3s OF INACTIVITY) */}
         {!isEmbeddedPreview && (
           <div
@@ -183,16 +190,16 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
             <button
               onClick={handleToggleFullscreen}
               title={isFullscreen ? 'Salir de Pantalla Completa (F11)' : 'Pantalla Completa (F11)'}
-              className="flex items-center gap-2 rounded-2xl border-2 border-white/20 bg-black/85 px-4 py-2 font-projector text-[18px] font-bold text-white shadow-2xl backdrop-blur-md transition-all hover:border-[#FFC53D] hover:bg-black"
+              className="flex items-center gap-2 rounded-2xl border-2 border-[var(--p-line-strong)] bg-[var(--p-panel)] px-4 py-2 font-projector text-[18px] font-bold text-[var(--p-text)] shadow-lg transition-all hover:border-[var(--p-accent-ink)]"
             >
               {isFullscreen ? (
                 <>
-                  <Minimize className="h-5 w-5 text-[#FFC53D]" />
+                  <Minimize className="h-5 w-5 text-[var(--p-accent-ink)]" />
                   <span>Salir F11</span>
                 </>
               ) : (
                 <>
-                  <Maximize className="h-5 w-5 text-[#FFC53D]" />
+                  <Maximize className="h-5 w-5 text-[var(--p-accent-ink)]" />
                   <span>Pantalla Completa (F11)</span>
                 </>
               )}
@@ -202,7 +209,7 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
               <button
                 onClick={onExitProjector}
                 title="Regresar a la Consola"
-                className="group flex items-center gap-2 rounded-2xl border-2 border-white/20 bg-black/85 px-4 py-2 font-projector text-[18px] font-bold text-white shadow-2xl backdrop-blur-md transition-all hover:border-white hover:bg-black"
+                className="group flex items-center gap-2 rounded-2xl border-2 border-[var(--p-line-strong)] bg-[var(--p-panel)] px-4 py-2 font-projector text-[18px] font-bold text-[var(--p-text)] shadow-lg transition-all hover:border-[var(--p-text)]"
               >
                 <ArrowLeft className="h-5 w-5 transition-transform group-hover:-translate-x-1" />
                 <span>Consola</span>
@@ -214,7 +221,7 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
         {/* CELEBRATION CONFETTI EFFECTS */}
         <CelebrationCanvas
           active={Boolean(scene.celebrationActive || viewMode === 'PODIUM_CELEBRATION')}
-          accentColor={scene.celebrationWinner?.color || '#FFC53D'}
+          accentColor={scene.celebrationWinner?.color || brand.accent}
         />
 
         {/* BUZZER STAGE OVERLAY & PULSING INDICATOR */}
@@ -224,35 +231,45 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
         />
 
         {/* VIEW SWITCHER ROUTING (ANIMATED WITH 400ms CURTAIN WIPE) */}
-        <div key={viewMode} className="relative z-10 flex flex-1 min-h-0 w-full flex-col justify-between animate-projector-wipe">
-          {viewMode === 'BLACKOUT' ? (
-            /* INTERMISSION / PAUSE SCREEN OR PURE BLACKOUT */
-            <IntermissionDisplay state={masterState} />
-          ) : viewMode === 'RAFFLE_STAGE' ? (
-            /* RAFFLE & GIVEAWAY STAGE */
-            <RaffleStageDisplay state={masterState} />
-          ) : viewMode === 'SCOREBOARD_ONLY' || viewMode === 'LEADERBOARD_FULL' ? (
-            /* FULL SCOREBOARD / LEADERBOARD */
-            <ScoreboardViewDisplay state={masterState} />
-          ) : viewMode === 'PODIUM_CELEBRATION' ? (
-            /* PODIUM CEREMONY */
-            <PodiumCelebrationDisplay state={masterState} />
-          ) : (
-            /* GAME STAGE + ACTIVE GAME ARENA */
-            <GameStageDisplay state={masterState} />
-          )}
-        </div>
+        <ProjectorBrandContext.Provider value={brand}>
+          <div key={viewMode} className="relative z-10 flex flex-1 min-h-0 w-full flex-col justify-between animate-projector-wipe">
+            {viewMode === 'BLACKOUT' ? (
+              /* INTERMISSION / PAUSE SCREEN */
+              <IntermissionDisplay state={masterState} />
+            ) : viewMode === 'RAFFLE_STAGE' ? (
+              /* RAFFLE & GIVEAWAY STAGE */
+              <RaffleStageDisplay state={masterState} />
+            ) : viewMode === 'SCOREBOARD_ONLY' || viewMode === 'LEADERBOARD_FULL' ? (
+              /* FULL SCOREBOARD / LEADERBOARD */
+              <ScoreboardViewDisplay state={masterState} />
+            ) : viewMode === 'PODIUM_CELEBRATION' ? (
+              /* PODIUM CEREMONY */
+              <PodiumCelebrationDisplay state={masterState} />
+            ) : (
+              /* GAME STAGE + ACTIVE GAME ARENA */
+              <GameStageDisplay state={masterState} />
+            )}
+          </div>
+        </ProjectorBrandContext.Provider>
 
         {/* LOWER THIRD TICKER BANNER */}
-        {hudToggles.showTicker && scene.tickerActive && scene.tickerMessage && viewMode !== 'BLACKOUT' && (
-          <div className="relative z-30 mt-3 -mx-[96px] -mb-[20px] shrink-0 border-t-2 border-[#2A2D5C] bg-[#0A0B1E]/95 px-12 py-2.5 shadow-2xl backdrop-blur-xl">
+        {hudToggles.showTicker && scene.tickerActive && scene.tickerMessage && viewMode !== 'BLACKOUT' && viewMode !== 'PODIUM_CELEBRATION' && (
+          <div
+            className="relative z-30 mt-3 -mx-[96px] -mb-[54px] shrink-0 px-[96px] py-3.5 shadow-md"
+            style={{
+              backgroundColor: 'var(--p-brand)',
+              color: 'var(--p-on-brand)',
+            }}
+          >
             <div className="flex items-center gap-6">
-              <span className="flex shrink-0 items-center gap-2 rounded-xl bg-red-600 px-4 py-1.5 font-projector text-[22px] font-black uppercase tracking-wider text-white shadow-md">
-                <Flame className="h-5 w-5 text-[#FFC53D]" />
-                EN VIVO
-              </span>
+              <div className="shrink-0">
+                <BrandMark brand={brand} size={44} inverse />
+              </div>
               <div className="flex-1 overflow-hidden">
-                <p className="truncate font-projector text-[28px] font-bold text-white tracking-wide">
+                <p
+                  className="truncate font-projector text-[30px] font-bold tracking-tight"
+                  style={{ color: 'var(--p-on-brand)' }}
+                >
                   {scene.tickerMessage}
                 </p>
               </div>
@@ -265,50 +282,55 @@ export const MasterProjectorView: React.FC<MasterProjectorViewProps> = ({
 };
 
 /* -------------------------------------------------------------
- * Intermission / Pause Screen with 300px Countdown & Next Game
+ * Intermission / Pause Screen with BrandMark, Countdown & Top 3
  * ------------------------------------------------------------- */
 const IntermissionDisplay: React.FC<{ state: MasterLiveState }> = ({ state }) => {
-  const { timer, teams, gameStage, scoreboard } = state;
+  const { timer, teams, gameStage } = state;
+  const brand = useProjectorBrand();
   const ranked = rankStudioTeams(teams, true).slice(0, 3);
 
-  // If timer is not running and remaining is 0, show standby pause screen
   const secondsLeft = timer.secondsRemaining;
   const isCountdown = timer.mode === 'countdown' && secondsLeft > 0;
 
   const nextGameLabel = getNextGameLabel(gameStage.activeGameId);
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-between py-4 text-center select-none animate-projector-wipe">
-      {/* Top Header */}
-      <div className="flex items-center gap-3 rounded-full border-2 border-red-500/60 bg-[#15173A] px-8 py-2.5 shadow-2xl">
-        <Radio className="h-7 w-7 text-red-500 animate-pulse" />
-        <span className="font-projector text-[24px] font-black uppercase tracking-widest text-red-400">
-          SEÑAL EN ESPERA • INTERMEDIO OFICIAL
-        </span>
+    <div className="flex h-full w-full flex-col items-center justify-between py-2 text-center select-none animate-projector-wipe">
+      {/* Top Brand Header: BrandMark (72px) + Event Name + "Intermedio" */}
+      <div className="flex items-center gap-5 rounded-3xl border-2 border-[var(--p-line)] bg-[var(--p-panel)] px-8 py-4 shadow-md">
+        <BrandMark brand={brand} size={72} />
+        <div className="flex flex-col items-start text-left">
+          <span className="font-projector-title text-[36px] leading-tight text-[var(--p-text)]">
+            {brand.name}
+          </span>
+          <span className="font-projector text-[24px] font-bold text-[var(--p-accent-ink)]">
+            Intermedio
+          </span>
+        </div>
       </div>
 
-      {/* Center Hero: "Volvemos en" + Giant Countdown (300px) */}
+      {/* Center Hero: "Volvemos en" + Giant Countdown */}
       <div className="my-auto flex flex-col items-center justify-center">
-        <p className="font-projector text-[32px] font-extrabold uppercase tracking-widest text-[#B8BCE6]">
-          {isCountdown ? 'VOLVEMOS EN' : 'REGRESAMOS EN BREVES MOMENTOS'}
+        <p className="font-projector text-[30px] font-bold tracking-wide text-[var(--p-text-2)]">
+          {isCountdown ? 'Volvemos en' : 'Regresamos en breves momentos'}
         </p>
 
         {isCountdown ? (
-          <div className="font-projector tabular-numbers text-[280px] font-black leading-none text-white drop-shadow-[0_10px_40px_rgba(0,0,0,0.9)] my-2">
+          <div className="font-projector tabular-numbers text-[260px] font-black leading-none text-[var(--p-text)] my-2">
             {formatTimeDisplay(secondsLeft)}
           </div>
         ) : (
-          <div className="my-6 flex h-40 w-40 items-center justify-center rounded-full border-4 border-[#2A2D5C] bg-[#15173A] shadow-2xl">
-            <Clock className="h-20 w-20 text-[#FFC53D] animate-pulse" />
+          <div className="my-6 flex h-36 w-36 items-center justify-center rounded-full border-4 border-[var(--p-line)] bg-[var(--p-panel)] shadow-md">
+            <Clock className="h-18 w-18 text-[var(--p-accent-ink)] animate-pulse" />
           </div>
         )}
 
         {/* A continuación: [juego o dinámica] */}
-        <div className="mt-4 flex items-center gap-4 rounded-3xl border-2 border-[#FFC53D] bg-[#15173A] px-10 py-3 shadow-xl">
-          <span className="font-projector text-[24px] font-bold text-[#B8BCE6]">
-            A CONTINUACIÓN:
+        <div className="mt-4 flex items-center gap-4 rounded-3xl border-2 border-[var(--p-accent-ink)] bg-[var(--p-panel)] px-10 py-3.5 shadow-md">
+          <span className="font-projector text-[24px] font-bold text-[var(--p-text-2)]">
+            A continuación:
           </span>
-          <span className="font-projector-title text-[36px] text-[#FFC53D]">
+          <span className="font-projector-title text-[36px] text-[var(--p-accent-ink)]">
             {nextGameLabel}
           </span>
         </div>
@@ -316,26 +338,28 @@ const IntermissionDisplay: React.FC<{ state: MasterLiveState }> = ({ state }) =>
 
       {/* Bottom: Top 3 Teams Standings */}
       {ranked.length > 0 && (
-        <div className="flex w-full max-w-4xl flex-col items-center border-t-2 border-[#2A2D5C] pt-6">
-          <span className="font-projector text-[20px] font-bold uppercase tracking-widest text-[#B8BCE6] mb-3">
-            LÍDERES DE LA TABLA
+        <div className="flex w-full max-w-[1560px] flex-col items-center border-t-2 border-[var(--p-line)] pt-5">
+          <span className="font-projector text-[20px] font-bold tracking-wider text-[var(--p-text-3)] mb-3">
+            Líderes de la tabla
           </span>
           <div className="flex w-full items-center justify-center gap-6">
             {ranked.map((t) => (
               <div
                 key={t.id}
-                className="flex flex-1 items-center justify-between rounded-2xl border-2 border-[#2A2D5C] bg-[#15173A] px-6 py-3 shadow-md"
+                className="flex flex-1 min-w-0 items-center justify-between gap-4 rounded-2xl border-2 border-[var(--p-line)] bg-[var(--p-panel)] px-6 py-3.5 shadow-sm"
                 style={{ borderLeftColor: t.color, borderLeftWidth: '8px' }}
               >
-                <div className="flex items-center gap-3">
-                  <span className="font-projector text-[22px] font-black text-[#B8BCE6]">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="font-projector text-[22px] font-black text-[var(--p-text-2)] shrink-0">
                     #{t.rank}
                   </span>
-                  <span className="font-projector text-[24px] font-black uppercase text-white truncate max-w-[140px]">
-                    {t.name}
-                  </span>
+                  <div className="min-w-0 flex-1 text-left">
+                    <FitText max={26} min={16} className="font-projector font-extrabold text-[var(--p-text)]">
+                      {t.name}
+                    </FitText>
+                  </div>
                 </div>
-                <span className="font-projector tabular-numbers text-[32px] font-black text-[#FFC53D]">
+                <span className="font-projector tabular-numbers text-[26px] font-black text-[var(--p-accent-ink)] shrink-0">
                   {t.score} PTS
                 </span>
               </div>

@@ -1,6 +1,7 @@
 import React from 'react';
-import { TournamentBracket, TeamMatcherResult } from '../../../types/masterStudio';
+import { TeamMatcherResult } from '../../../types/masterStudio';
 import { Trophy, Swords, CheckCircle2 } from 'lucide-react';
+import { FitText } from '../common/FitText';
 
 interface TournamentBracketArenaProps {
   matcherResult: TeamMatcherResult | null;
@@ -11,15 +12,14 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
   matcherResult,
   prizeTitle,
 }) => {
-  // Empty state: clean broadcast title (Requirement 2: no operator instructions on projector)
   if (!matcherResult) {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full text-center p-12">
-        <Trophy className="w-24 h-24 text-[#FFC53D] mb-6 opacity-60 animate-pulse" />
-        <h2 className="text-[44px] font-black text-white mb-3">
+        <Trophy className="w-24 h-24 text-[var(--p-accent-ink)] mb-6 opacity-70 animate-pulse" />
+        <h2 className="font-projector-title text-[44px] text-[var(--p-text)] mb-3">
           {prizeTitle || 'Torneo y Emparejamiento Oficial'}
         </h2>
-        <p className="text-[26px] text-[#B8BCE6]">
+        <p className="text-[26px] text-[var(--p-text-2)]">
           El cuadro de llaves y duelos se revelará en esta pantalla al comenzar.
         </p>
       </div>
@@ -40,14 +40,14 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
 
     return (
       <div className="flex flex-col w-full h-full justify-between gap-6 select-none">
-        <div className="flex items-center justify-between px-6 py-2.5 rounded-2xl bg-[#15173A] border border-[#2A2D5C]">
+        <div className="flex items-center justify-between px-6 py-2.5 rounded-2xl bg-[var(--p-panel)] border border-[var(--p-line)]">
           <div className="flex items-center gap-3">
-            <Trophy className="w-7 h-7 text-[#FFC53D]" />
-            <span className="text-[22px] font-black uppercase tracking-wider text-white">
-              CUADRO DE LLAVES · TORNEO ELIMINATORIO ({bracket.size} EQUIPOS)
+            <Trophy className="w-7 h-7 text-[var(--p-accent-ink)]" />
+            <span className="text-[22px] font-black uppercase tracking-wider text-[var(--p-text)]">
+              Cuadro de llaves · Torneo eliminatorio ({bracket.size} equipos)
             </span>
           </div>
-          <span className="text-[18px] text-[#FFC53D] font-bold">
+          <span className="text-[18px] text-[var(--p-accent-ink)] font-bold">
             {prizeTitle || 'Por el Gran Trofeo'}
           </span>
         </div>
@@ -60,8 +60,8 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
 
             return (
               <div key={rIdx} className="flex-1 flex flex-col justify-between min-w-[260px] gap-4">
-                <div className="text-center py-2 rounded-xl bg-[#1C1F47] border border-[#2A2D5C]">
-                  <span className="text-[18px] font-black uppercase tracking-widest text-[#FFC53D]">
+                <div className="text-center py-2 rounded-xl bg-[var(--p-brand)] text-[var(--p-on-brand)]">
+                  <span className="text-[18px] font-black uppercase tracking-widest">
                     {roundNames[rIdx] || `Ronda ${rIdx + 1}`}
                   </span>
                 </div>
@@ -72,40 +72,48 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
                     return (
                       <div
                         key={match.id}
-                        className={`p-3.5 rounded-2xl border-2 transition-all flex flex-col gap-2 shadow-xl ${
+                        className={`p-3.5 rounded-2xl border-2 transition-all flex flex-col gap-2 shadow-sm ${
                           isFinal
-                            ? 'bg-[#3A2A05] border-[#FFC53D]'
+                            ? 'bg-[var(--p-accent-soft)] border-[var(--p-accent-ink)]'
                             : hasWinner
-                            ? 'bg-[#15173A] border-[#4ADE80]/80'
-                            : 'bg-[#15173A] border-[#2A2D5C]'
+                            ? 'bg-[var(--p-panel)] border-[var(--p-ok)]'
+                            : 'bg-[var(--p-panel)] border-[var(--p-line)]'
                         }`}
                       >
                         {/* Team A */}
                         <div
-                          className={`flex items-center justify-between px-4 py-2 rounded-xl font-black text-[20px] transition-all ${
+                          className={`flex items-center justify-between gap-2 px-4 py-2 rounded-xl font-black transition-all ${
                             match.winner === match.teamA
-                              ? 'bg-[#0F5132] text-[#4ADE80] border border-[#4ADE80]'
+                              ? 'bg-[var(--p-ok-bg)] text-[var(--p-ok)] border border-[var(--p-ok)]'
                               : match.winner && match.winner !== match.teamA
-                              ? 'bg-black/30 text-slate-500 line-through'
-                              : 'bg-[#0A0B1E] text-white'
+                              ? 'bg-[var(--p-panel-2)] text-[var(--p-text-3)] line-through opacity-55'
+                              : 'bg-[var(--p-panel-2)] text-[var(--p-text)]'
                           }`}
                         >
-                          <span className="truncate">{match.teamA || 'Por definir'}</span>
-                          {match.winner === match.teamA && <CheckCircle2 className="w-5 h-5 shrink-0 ml-2" />}
+                          <div className="min-w-0 flex-1 text-left">
+                            <FitText max={22} min={13} className="w-full font-black" title={match.teamA || 'Por definir'}>
+                              {match.teamA || 'Por definir'}
+                            </FitText>
+                          </div>
+                          {match.winner === match.teamA && <CheckCircle2 className="w-5 h-5 shrink-0" />}
                         </div>
 
                         {/* Team B */}
                         <div
-                          className={`flex items-center justify-between px-4 py-2 rounded-xl font-black text-[20px] transition-all ${
+                          className={`flex items-center justify-between gap-2 px-4 py-2 rounded-xl font-black transition-all ${
                             match.winner === match.teamB
-                              ? 'bg-[#0F5132] text-[#4ADE80] border border-[#4ADE80]'
+                              ? 'bg-[var(--p-ok-bg)] text-[var(--p-ok)] border border-[var(--p-ok)]'
                               : match.winner && match.winner !== match.teamB
-                              ? 'bg-black/30 text-slate-500 line-through'
-                              : 'bg-[#0A0B1E] text-white'
+                              ? 'bg-[var(--p-panel-2)] text-[var(--p-text-3)] line-through opacity-55'
+                              : 'bg-[var(--p-panel-2)] text-[var(--p-text)]'
                           }`}
                         >
-                          <span className="truncate">{match.teamB || 'Por definir'}</span>
-                          {match.winner === match.teamB && <CheckCircle2 className="w-5 h-5 shrink-0 ml-2" />}
+                          <div className="min-w-0 flex-1 text-left">
+                            <FitText max={22} min={13} className="w-full font-black" title={match.teamB || 'Por definir'}>
+                              {match.teamB || 'Por definir'}
+                            </FitText>
+                          </div>
+                          {match.winner === match.teamB && <CheckCircle2 className="w-5 h-5 shrink-0" />}
                         </div>
                       </div>
                     );
@@ -123,14 +131,14 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
   if (matcherResult.type === 'duels_1v1' && matcherResult.matchups) {
     return (
       <div className="flex flex-col w-full h-full justify-between gap-6 select-none">
-        <div className="flex items-center justify-between px-6 py-2.5 rounded-2xl bg-[#15173A] border border-[#2A2D5C]">
+        <div className="flex items-center justify-between px-6 py-2.5 rounded-2xl bg-[var(--p-panel)] border border-[var(--p-line)]">
           <div className="flex items-center gap-3">
-            <Swords className="w-7 h-7 text-[#FFC53D]" />
-            <span className="text-[22px] font-black uppercase tracking-wider text-white">
-              EMPAREJAMIENTO DE DUELOS 1 VS 1 ({matcherResult.matchups.length} DUELOS)
+            <Swords className="w-7 h-7 text-[var(--p-accent-ink)]" />
+            <span className="text-[22px] font-black uppercase tracking-wider text-[var(--p-text)]">
+              Emparejamiento de duelos 1 vs 1 ({matcherResult.matchups.length} duelos)
             </span>
           </div>
-          <span className="text-[18px] text-[#FFC53D] font-bold">
+          <span className="text-[18px] text-[var(--p-accent-ink)] font-bold">
             {prizeTitle || 'Sorteo de Enfrentamientos'}
           </span>
         </div>
@@ -139,16 +147,20 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
           {matcherResult.matchups.map((m, idx) => (
             <div
               key={idx}
-              className="p-5 rounded-2xl bg-[#15173A] border-2 border-[#2A2D5C] flex items-center justify-between gap-4 shadow-xl"
+              className="p-5 rounded-2xl bg-[var(--p-panel)] border-2 border-[var(--p-line)] flex items-center justify-between gap-4 shadow-sm"
             >
-              <div className="flex-1 p-3 rounded-xl bg-[#0A0B1E] border border-blue-500/40 text-center font-black text-[24px] text-white truncate">
-                {m.teamA}
+              <div className="min-w-0 flex-1 p-3 rounded-xl bg-[var(--p-panel-2)] border border-[var(--p-line-strong)] text-center text-[var(--p-text)]">
+                <FitText max={24} min={14} className="w-full font-black text-center" title={m.teamA}>
+                  {m.teamA}
+                </FitText>
               </div>
-              <div className="w-12 h-12 rounded-full bg-[#FFC53D] text-slate-950 font-black text-[18px] flex items-center justify-center shrink-0 shadow-lg">
+              <div className="w-12 h-12 rounded-full bg-[var(--p-accent)] text-[var(--p-on-accent)] font-black text-[18px] flex items-center justify-center shrink-0 shadow-sm">
                 VS
               </div>
-              <div className="flex-1 p-3 rounded-xl bg-[#0A0B1E] border border-red-500/40 text-center font-black text-[24px] text-white truncate">
-                {m.teamB}
+              <div className="min-w-0 flex-1 p-3 rounded-xl bg-[var(--p-panel-2)] border border-[var(--p-line-strong)] text-center text-[var(--p-text)]">
+                <FitText max={24} min={14} className="w-full font-black text-center" title={m.teamB}>
+                  {m.teamB}
+                </FitText>
               </div>
             </div>
           ))}
@@ -161,11 +173,11 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
   if (matcherResult.type === 'n_teams' && matcherResult.groups) {
     return (
       <div className="flex flex-col w-full h-full justify-between gap-6 select-none">
-        <div className="flex items-center justify-between px-6 py-2.5 rounded-2xl bg-[#15173A] border border-[#2A2D5C]">
-          <span className="text-[22px] font-black uppercase tracking-wider text-white">
-            GRUPOS ASIGNADOS ALEATORIAMENTE ({matcherResult.groups.length} EQUIPOS)
+        <div className="flex items-center justify-between px-6 py-2.5 rounded-2xl bg-[var(--p-panel)] border border-[var(--p-line)]">
+          <span className="text-[22px] font-black uppercase tracking-wider text-[var(--p-text)]">
+            Grupos asignados aleatoriamente ({matcherResult.groups.length} equipos)
           </span>
-          <span className="text-[18px] text-[#FFC53D] font-bold">
+          <span className="text-[18px] text-[var(--p-accent-ink)] font-bold">
             {prizeTitle || 'Distribución Oficial'}
           </span>
         </div>
@@ -174,19 +186,25 @@ export const TournamentBracketArena: React.FC<TournamentBracketArenaProps> = ({
           {matcherResult.groups.map((group, idx) => (
             <div
               key={idx}
-              className="p-5 rounded-2xl bg-[#15173A] border-2 flex flex-col justify-between shadow-xl"
-              style={{ borderColor: group.color || '#2A2D5C' }}
+              className="p-5 rounded-2xl bg-[var(--p-panel)] border-2 flex flex-col justify-between shadow-sm"
+              style={{ borderColor: group.color || 'var(--p-line)' }}
             >
-              <div className="pb-3 border-b border-[#2A2D5C] flex items-center justify-between">
-                <span className="text-[22px] font-black text-white">{group.groupName}</span>
-                <span className="px-2 py-0.5 rounded-full bg-white/10 text-white text-[13px] font-bold">
+              <div className="pb-3 border-b border-[var(--p-line)] flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <FitText max={22} min={14} className="w-full font-black text-[var(--p-text)]" title={group.groupName}>
+                    {group.groupName}
+                  </FitText>
+                </div>
+                <span className="shrink-0 px-2 py-0.5 rounded-full bg-[var(--p-panel-2)] text-[var(--p-text-2)] text-[13px] font-bold">
                   {group.members.length} miembros
                 </span>
               </div>
               <div className="flex-1 flex flex-col gap-1.5 py-3 overflow-y-auto">
                 {group.members.map((m, mIdx) => (
-                  <div key={mIdx} className="px-3 py-1.5 rounded-lg bg-[#0A0B1E] text-white text-[18px] font-bold truncate">
-                    {m}
+                  <div key={mIdx} className="px-3 py-1.5 rounded-lg bg-[var(--p-panel-2)] text-[var(--p-text)]">
+                    <FitText max={18} min={13} className="w-full font-bold" title={m}>
+                      {m}
+                    </FitText>
                   </div>
                 ))}
               </div>

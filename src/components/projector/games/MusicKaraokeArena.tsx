@@ -1,6 +1,6 @@
 import React from 'react';
 import { MusicKaraokeGameState } from '../../../types/masterStudio';
-import { Music, Mic2, Disc, Sparkles, Volume2, HelpCircle } from 'lucide-react';
+import { Music, Disc, Volume2 } from 'lucide-react';
 
 interface MusicKaraokeArenaProps {
   stage: MusicKaraokeGameState;
@@ -14,9 +14,9 @@ export const MusicKaraokeArena: React.FC<MusicKaraokeArenaProps> = ({ stage }) =
   if (!item) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-12">
-        <Disc className="w-24 h-24 text-[#FFC53D] mb-6 opacity-80" />
-        <h2 className="font-projector-title text-[54px] text-white mb-3">MÚSICA & KARAOKE</h2>
-        <p className="font-projector text-[28px] font-bold text-[#B8BCE6] uppercase tracking-wider">COMPETICIÓN EN VIVO</p>
+        <Disc className="w-24 h-24 text-[var(--p-accent-ink)] mb-6 opacity-80" />
+        <h2 className="font-projector-title text-[54px] text-[var(--p-text)] mb-3">Música & Karaoke</h2>
+        <p className="font-projector text-[28px] font-bold text-[var(--p-text-2)] uppercase tracking-wider">Competición en vivo</p>
       </div>
     );
   }
@@ -36,17 +36,17 @@ export const MusicKaraokeArena: React.FC<MusicKaraokeArenaProps> = ({ stage }) =
       {/* Top Header: Mode & Points */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-[#1C1F47] border border-[#2A2D5C] text-[#FFC53D] font-black text-[22px] uppercase tracking-wide">
-            <Music className="w-6 h-6 text-[#FFC53D]" />
+          <span className="inline-flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-[var(--p-panel)] border border-[var(--p-line)] text-[var(--p-accent-ink)] font-black text-[22px] uppercase tracking-wide">
+            <Music className="w-6 h-6 text-[var(--p-accent-ink)]" />
             {modeLabels[currentMode] || 'Music Show'}
           </span>
-          <span className="px-5 py-2 rounded-full bg-[#15173A] border border-[#2A2D5C] text-white font-bold text-[22px]">
+          <span className="px-5 py-2 rounded-full bg-[var(--p-panel-2)] border border-[var(--p-line)] text-[var(--p-text)] font-bold text-[22px]">
             {item.category || 'Música'} · {item.points} PTS
           </span>
         </div>
 
         {isPlaying && (
-          <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-[#0F5132] border-2 border-[#4ADE80] text-[#4ADE80] text-[22px] font-black uppercase tracking-wider animate-pulse">
+          <div className="inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-[var(--p-ok-bg)] border-2 border-[var(--p-ok)] text-[var(--p-ok)] text-[22px] font-black uppercase tracking-wider animate-pulse">
             <Volume2 className="w-6 h-6" />
             Audio en Vivo
           </div>
@@ -56,7 +56,7 @@ export const MusicKaraokeArena: React.FC<MusicKaraokeArenaProps> = ({ stage }) =
       {/* Center Arena: Animated Equalizer + Mystery / Revealed Title */}
       <div className="flex-1 flex flex-col items-center justify-center px-10 py-4 gap-8">
         {/* Animated Equalizer with large bars */}
-        <div className="flex items-end justify-center gap-3 h-36 w-full max-w-4xl px-8 py-4 rounded-3xl bg-[#15173A]/80 border-2 border-[#2A2D5C]">
+        <div className="flex items-end justify-center gap-3 h-36 w-full max-w-4xl px-8 py-4 rounded-3xl bg-[var(--p-panel)] border-2 border-[var(--p-line)]">
           {[60, 90, 45, 100, 75, 120, 50, 85, 110, 65, 95, 40, 105, 80, 55, 115, 70].map((h, i) => {
             const barHeight = isPlaying ? `${Math.min(100, Math.max(20, h * 0.8))}%` : '20%';
             return (
@@ -65,7 +65,7 @@ export const MusicKaraokeArena: React.FC<MusicKaraokeArenaProps> = ({ stage }) =
                 className="flex-1 rounded-full transition-all duration-300"
                 style={{
                   height: barHeight,
-                  backgroundColor: i % 2 === 0 ? '#4F7BFF' : '#FFC53D',
+                  backgroundColor: i % 2 === 0 ? 'var(--p-brand)' : 'var(--p-accent)',
                   opacity: isPlaying ? 1 : 0.4,
                 }}
               />
@@ -77,22 +77,22 @@ export const MusicKaraokeArena: React.FC<MusicKaraokeArenaProps> = ({ stage }) =
         <div className="text-center max-w-5xl">
           {isSongRevealed ? (
             <div className="flex flex-col items-center gap-2 animate-in zoom-in-95 duration-300">
-              <span className="text-[20px] font-black uppercase tracking-widest text-[#4ADE80]">
-                TÍTULO REVELADO
+              <span className="text-[20px] font-black uppercase tracking-widest text-[var(--p-ok)]">
+                Título revelado
               </span>
-              <h2 className="text-[72px] font-black leading-tight text-white tracking-tight">
+              <h2 className="text-[72px] font-black leading-tight text-[var(--p-text)] tracking-tight">
                 {item.title}
               </h2>
-              <p className="text-[36px] font-bold text-[#FFC53D] mt-1">
+              <p className="text-[36px] font-bold text-[var(--p-accent-ink)] mt-1">
                 {item.artist}
               </p>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3">
-              <h2 className="text-[84px] font-black tracking-widest text-white/90 drop-shadow-lg">
+              <h2 className="text-[84px] font-black tracking-widest text-[var(--p-text)]">
                 ? ? ? ? ?
               </h2>
-              <span className="text-[26px] font-black tracking-widest text-[#B8BCE6] uppercase">
+              <span className="text-[26px] font-black tracking-wide text-[var(--p-text-2)]">
                 Pista musical en reproducción · ¿Reconoces la canción?
               </span>
             </div>
@@ -101,11 +101,11 @@ export const MusicKaraokeArena: React.FC<MusicKaraokeArenaProps> = ({ stage }) =
 
         {/* If Mode is Guess Lyrics, show the lyrics challenge */}
         {currentMode === 'guess_lyrics' && item.letraPrevia && (
-          <div className="w-full max-w-4xl p-6 rounded-2xl bg-[#1C1F47] border-2 border-[#4B5299] text-center">
-            <p className="text-[24px] text-[#B8BCE6] font-medium mb-3 italic">
+          <div className="w-full max-w-4xl p-6 rounded-2xl bg-[var(--p-panel)] border-2 border-[var(--p-line-strong)] text-center">
+            <p className="text-[24px] text-[var(--p-text-2)] font-medium mb-3 italic">
               "{item.letraPrevia}..."
             </p>
-            <div className="text-[38px] font-black text-[#FFC53D]">
+            <div className="text-[38px] font-black text-[var(--p-accent-ink)]">
               {stage?.lyricsSolved ? item.letraSecreta : '¿Cuál es la siguiente frase?'}
             </div>
           </div>
@@ -113,9 +113,9 @@ export const MusicKaraokeArena: React.FC<MusicKaraokeArenaProps> = ({ stage }) =
       </div>
 
       {/* Large Call-To-Action Banner at Bottom */}
-      <div className="w-full py-4 px-8 rounded-2xl bg-[#15173A] border-4 border-[#FFC53D] text-center shadow-xl shadow-[#FFC53D]/10">
-        <p className="text-[34px] font-black text-[#FFC53D] uppercase tracking-wide">
-          ¡PULSA TU BOTÓN PARA RESPONDER!
+      <div className="w-full py-4 px-8 rounded-2xl bg-[var(--p-brand)] text-[var(--p-on-brand)] text-center shadow-md">
+        <p className="text-[34px] font-black uppercase tracking-wide">
+          ¡Pulsa tu botón para responder!
         </p>
       </div>
     </div>

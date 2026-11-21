@@ -20,26 +20,41 @@ export const ProjectorClock: React.FC<ProjectorClockProps> = ({
   if (mode === 'off') return null;
 
   const defaultLabel = mode === 'countdown' ? 'TIEMPO' : 'CRONÓMETRO';
+  const isAlert = isWarning || isFinished;
 
   return (
     <div
-      className={`flex items-center gap-4 rounded-3xl border-2 px-6 py-2.5 backdrop-blur-xl shadow-2xl transition-all ${
+      className={`flex items-center gap-4 rounded-3xl border-2 px-6 py-2.5 shadow-md transition-all ${
         isWarning
-          ? 'border-red-500 bg-[#3F1216] text-red-400 animate-projector-incorrect'
+          ? 'border-[var(--p-err)] bg-[var(--p-err-bg)] text-[var(--p-err)] animate-projector-incorrect'
           : isFinished
-          ? 'border-red-700 bg-[#25090C] text-red-400'
-          : 'border-[#2A2D5C] bg-[#15173A] text-white'
+          ? 'border-[var(--p-err)] bg-[var(--p-err-bg)] text-[var(--p-err)]'
+          : 'border-[var(--p-line)] bg-[var(--p-panel)] text-[var(--p-text)]'
       }`}
     >
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[#FFC53D]">
+      <div
+        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+          isAlert
+            ? 'bg-[var(--p-err)] text-[var(--p-err-bg)]'
+            : 'bg-[var(--p-panel-2)] text-[var(--p-accent-ink)]'
+        }`}
+      >
         {mode === 'countdown' ? <Timer className="h-7 w-7" /> : <Clock className="h-7 w-7" />}
       </div>
 
       <div className="flex flex-col items-end">
-        <span className="font-projector text-[20px] font-bold uppercase tracking-widest text-[#B8BCE6]">
+        <span
+          className={`font-projector text-[20px] font-bold uppercase tracking-widest ${
+            isAlert ? 'text-[var(--p-err)]' : 'text-[var(--p-text-3)]'
+          }`}
+        >
           {label || defaultLabel}
         </span>
-        <span className="font-projector tabular-numbers text-[56px] font-black leading-none tracking-tight text-white drop-shadow">
+        <span
+          className={`font-projector tabular-numbers text-[56px] font-black leading-none tracking-tight ${
+            isAlert ? 'text-[var(--p-err)]' : 'text-[var(--p-text)]'
+          }`}
+        >
           {formatTimeDisplay(seconds)}
         </span>
       </div>

@@ -3,6 +3,8 @@
  * Complete Data Models & Types
  */
 
+import type { EventBrand } from '../styles/eventBrand';
+
 export type MasterViewMode =
   | 'SCOREBOARD_ONLY'
   | 'GAME_STAGE'
@@ -115,6 +117,7 @@ export interface LiveSceneSettings {
   celebrationWinner?: CelebrationWinner | null;
   tickerActive: boolean;
   tickerMessage: string;
+  eventBrand?: EventBrand;
 }
 
 /* -------------------------------------------------------------

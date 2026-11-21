@@ -2,27 +2,26 @@
 
 @layer base {
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
     background-color: #090d16;
     color: #f1f5f9;
   }
 }
 
 .font-scoreboard {
-  font-family: 'Chakra Petch', 'Inter', monospace, sans-serif;
+  font-family: 'Chakra Petch', 'Inter Variable', 'Inter', monospace, sans-serif;
 }
 
 .font-projector {
-  font-family: 'Archivo', sans-serif;
+  font-family: 'Archivo Variable', 'Archivo', sans-serif;
   letter-spacing: -0.01em;
 }
 
 .font-projector-title {
-  font-family: 'Archivo', sans-serif;
-  font-weight: 900;
-  font-stretch: 115%;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
+  font-family: 'Archivo Variable', 'Archivo', sans-serif;
+  font-weight: 800;
+  font-stretch: 100%;
+  letter-spacing: -0.015em;
 }
 
 .tabular-numbers {
@@ -44,15 +43,15 @@
 
 @keyframes projectorCorrectPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    box-shadow: 0 0 0 0 var(--p-ok, #4ADE80);
     transform: scale(1);
   }
   50% {
-    box-shadow: 0 0 40px 10px rgba(74, 222, 128, 0.9);
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--p-ok, #4ADE80) 35%, transparent);
     transform: scale(1.02);
   }
   100% {
-    box-shadow: 0 0 25px 4px rgba(74, 222, 128, 0.6);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--p-ok, #4ADE80) 20%, transparent);
     transform: scale(1);
   }
 }
@@ -64,9 +63,9 @@
 }
 
 @keyframes projectorScoreFlash {
-  0% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.08); filter: brightness(1.5) drop-shadow(0 0 25px #FFC53D); }
-  100% { transform: scale(1); filter: brightness(1); }
+  0% { transform: scale(1); }
+  50% { transform: scale(1.08); color: var(--p-accent-ink, #FFC53D); }
+  100% { transform: scale(1); }
 }
 
 .animate-projector-wipe {

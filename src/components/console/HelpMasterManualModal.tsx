@@ -38,7 +38,7 @@ export const HelpMasterManualModal: React.FC<HelpMasterManualModalProps> = ({
           </div>
           <div>
             <h2 className="text-xl font-black text-white font-sans">
-              Manual de Operación: Master Studio Pro
+              Manual de operación: Scoreboard Studio
             </h2>
             <p className="text-xs text-slate-400">
               Guía rápida para transmisiones en vivo, eventos deportivos y dinámicas interactivas.

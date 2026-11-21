@@ -15,9 +15,9 @@ export const BibleBookArena: React.FC<BibleBookArenaProps> = ({ stage }) => {
   if (!item) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-12">
-        <BookOpen className="w-24 h-24 text-[#FFC53D] mb-6 opacity-80" />
-        <h2 className="font-projector-title text-[54px] text-white mb-3">¿EN QUÉ LIBRO ESTÁ?</h2>
-        <p className="font-projector text-[28px] font-bold text-[#B8BCE6] uppercase tracking-wider">COMPETICIÓN EN VIVO</p>
+        <BookOpen className="w-24 h-24 text-[var(--p-accent-ink)] mb-6 opacity-80" />
+        <h2 className="font-projector-title text-[54px] text-[var(--p-text)] mb-3">¿En qué libro está?</h2>
+        <p className="font-projector text-[28px] font-bold text-[var(--p-text-2)] uppercase tracking-wider">Competición en vivo</p>
       </div>
     );
   }
@@ -29,20 +29,20 @@ export const BibleBookArena: React.FC<BibleBookArenaProps> = ({ stage }) => {
       {/* Top badges / meta */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#1C1F47] border border-[#2A2D5C] text-[#FFC53D] font-black text-[22px] tracking-wide uppercase">
-            <BookOpen className="w-6 h-6 text-[#FFC53D]" />
+          <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[var(--p-panel)] border border-[var(--p-line)] text-[var(--p-accent-ink)] font-black text-[22px] tracking-wide uppercase">
+            <BookOpen className="w-6 h-6 text-[var(--p-accent-ink)]" />
             {item.testament}
           </span>
           {item.hint && (
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#15173A] border border-[#4B5299] text-[#B8BCE6] font-semibold text-[22px]">
-              <Sparkles className="w-5 h-5 text-[#FFC53D]" />
+            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[var(--p-panel)] border border-[var(--p-line-strong)] text-[var(--p-text-2)] font-semibold text-[22px]">
+              <Sparkles className="w-5 h-5 text-[var(--p-accent-ink)]" />
               Pista: {item.hint}
             </span>
           )}
         </div>
 
         {stage.revealed && (
-          <div className="px-6 py-2.5 rounded-xl bg-[#0F5132] border-2 border-[#4ADE80] text-[#4ADE80] font-black text-[24px] uppercase tracking-wider animate-in fade-in duration-200">
+          <div className="px-6 py-2.5 rounded-xl bg-[var(--p-ok-bg)] border-2 border-[var(--p-ok)] text-[var(--p-ok)] font-black text-[24px] uppercase tracking-wider animate-in fade-in duration-200">
             Cita: {item.reference}
           </div>
         )}
@@ -51,7 +51,7 @@ export const BibleBookArena: React.FC<BibleBookArenaProps> = ({ stage }) => {
       {/* Main Quote / Verse in 74px centered */}
       <div className="flex-1 flex items-center justify-center px-12 py-4">
         <blockquote className="text-center max-w-6xl">
-          <p className="text-[74px] font-black leading-[1.12] text-white tracking-tight drop-shadow-md">
+          <p className="text-[74px] font-black leading-[1.12] text-[var(--p-text)] tracking-tight">
             “{item.verseOrEvent}”
           </p>
         </blockquote>

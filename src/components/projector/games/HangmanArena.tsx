@@ -20,9 +20,9 @@ export const HangmanArena: React.FC<HangmanArenaProps> = ({ stage }) => {
   if (!item) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center p-12">
-        <HelpCircle className="w-24 h-24 text-[#FFC53D] mb-6 opacity-80" />
-        <h2 className="font-projector-title text-[54px] text-white mb-3">AHORCADO PRO</h2>
-        <p className="font-projector text-[28px] font-bold text-[#B8BCE6] uppercase tracking-wider">COMPETICIÓN EN VIVO</p>
+        <HelpCircle className="w-24 h-24 text-[var(--p-accent-ink)] mb-6 opacity-80" />
+        <h2 className="font-projector-title text-[54px] text-[var(--p-text)] mb-3">Ahorcado Pro</h2>
+        <p className="font-projector text-[28px] font-bold text-[var(--p-text-2)] uppercase tracking-wider">Competición en vivo</p>
       </div>
     );
   }
@@ -40,20 +40,20 @@ export const HangmanArena: React.FC<HangmanArenaProps> = ({ stage }) => {
       {/* Header/Top Bar: Category, Hint and ERRORES indicator with circles */}
       <div className="flex items-center justify-between gap-6">
         <div className="flex items-center gap-3">
-          <span className="px-5 py-2 rounded-full bg-[#1C1F47] border border-[#2A2D5C] text-[#FFC53D] font-black text-[22px] uppercase tracking-wide">
+          <span className="px-5 py-2 rounded-full bg-[var(--p-panel)] border border-[var(--p-line)] text-[var(--p-accent-ink)] font-black text-[22px] uppercase tracking-wide">
             {item.category || 'Adivina la Palabra'}
           </span>
           {item.hint && (
-            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#15173A] border border-[#2A2D5C] text-[#B8BCE6] font-semibold text-[22px]">
-              <Sparkles className="w-5 h-5 text-[#FFC53D]" />
+            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[var(--p-panel-2)] border border-[var(--p-line)] text-[var(--p-text-2)] font-semibold text-[22px]">
+              <Sparkles className="w-5 h-5 text-[var(--p-accent-ink)]" />
               Pista: {item.hint}
             </span>
           )}
         </div>
 
-        {/* ERRORES indicator: red with × for failed strikes, green empty for available */}
-        <div className="flex items-center gap-3 px-6 py-2.5 rounded-2xl bg-[#15173A] border border-[#2A2D5C]">
-          <span className="text-[20px] font-black tracking-widest text-[#B8BCE6] uppercase mr-2">
+        {/* ERRORES indicator */}
+        <div className="flex items-center gap-3 px-6 py-2.5 rounded-2xl bg-[var(--p-panel)] border border-[var(--p-line)]">
+          <span className="text-[20px] font-black tracking-widest text-[var(--p-text-2)] uppercase mr-2">
             ERRORES
           </span>
           <div className="flex items-center gap-2.5">
@@ -62,14 +62,14 @@ export const HangmanArena: React.FC<HangmanArenaProps> = ({ stage }) => {
               return isUsed ? (
                 <div
                   key={idx}
-                  className="w-10 h-10 rounded-full bg-[#3F1216] border-2 border-[#EF4444] text-[#EF4444] flex items-center justify-center font-black animate-in zoom-in-75 duration-200"
+                  className="w-10 h-10 rounded-full bg-[var(--p-err-bg)] border-2 border-[var(--p-err)] text-[var(--p-err)] flex items-center justify-center font-black animate-in zoom-in-75 duration-200"
                 >
                   <X className="w-6 h-6 stroke-[3]" />
                 </div>
               ) : (
                 <div
                   key={idx}
-                  className="w-10 h-10 rounded-full bg-[#0F5132]/40 border-2 border-[#4ADE80]/60"
+                  className="w-10 h-10 rounded-full bg-[var(--p-ok-bg)] border-2 border-[var(--p-ok)]"
                 />
               );
             })}
@@ -77,35 +77,69 @@ export const HangmanArena: React.FC<HangmanArenaProps> = ({ stage }) => {
         </div>
       </div>
 
-      {/* Word Slots: 112x140px white cards for guessed letters, dashed border for missing */}
-      <div className="flex-1 flex items-center justify-center py-4">
-        <div className="flex flex-wrap items-center justify-center gap-3 max-w-6xl">
-          {item.word.split('').map((char, index) => {
-            if (char === ' ') {
-              return <div key={index} className="w-12 h-[140px]" />;
-            }
+      {/* Word Slots: ALWAYS on a single row with dynamic width and blank space gaps */}
+      <div className="flex-1 flex items-center justify-center py-4 w-full overflow-hidden">
+        {(() => {
+          const chars = item.word.split('');
+          const letterCount = chars.filter((c) => c !== ' ').length;
+          const spaceCount = chars.filter((c) => c === ' ').length;
+          const maxRowWidth = 1520;
+          const spaceWidth = spaceCount > 0 ? Math.min(48, Math.max(16, Math.floor(160 / spaceCount))) : 0;
+          const gapBetweenItems = Math.min(12, Math.max(4, Math.floor(180 / Math.max(1, chars.length))));
+          const totalGaps = (chars.length - 1) * gapBetweenItems;
+          const availableForCards = Math.max(200, maxRowWidth - (spaceCount * spaceWidth) - totalGaps);
+          const cardWidth = Math.min(112, Math.max(38, Math.floor(availableForCards / Math.max(1, letterCount))));
+          const cardHeight = Math.round(cardWidth * 1.25);
+          const fontSize = Math.round(cardWidth * 0.76);
 
-            const norm = normalizeChar(char);
-            const isGuessed = normalizedGuessed.has(norm);
-            const isRevealed = isGuessed || stage.solved || stage.gameOver;
+          return (
+            <div
+              className="flex flex-nowrap items-center justify-center w-full overflow-hidden"
+              style={{ gap: `${gapBetweenItems}px` }}
+            >
+              {chars.map((char, index) => {
+                if (char === ' ') {
+                  return (
+                    <div
+                      key={index}
+                      style={{ width: `${spaceWidth}px`, height: `${cardHeight}px` }}
+                      className="shrink-0"
+                    />
+                  );
+                }
 
-            return isRevealed ? (
-              <div
-                key={index}
-                className="w-[112px] h-[140px] rounded-2xl bg-white text-slate-950 font-black text-[76px] flex items-center justify-center shadow-2xl border-4 border-white transition-all transform animate-in zoom-in-90"
-              >
-                {char.toUpperCase()}
-              </div>
-            ) : (
-              <div
-                key={index}
-                className="w-[112px] h-[140px] rounded-2xl border-4 border-dashed border-[#2A2D5C] bg-[#15173A]/60 flex items-center justify-center text-transparent"
-              >
-                ?
-              </div>
-            );
-          })}
-        </div>
+                const norm = normalizeChar(char);
+                const isGuessed = normalizedGuessed.has(norm);
+                const isRevealed = isGuessed || stage.solved || stage.gameOver;
+
+                return isRevealed ? (
+                  <div
+                    key={index}
+                    style={{
+                      width: `${cardWidth}px`,
+                      height: `${cardHeight}px`,
+                      fontSize: `${fontSize}px`,
+                    }}
+                    className="shrink-0 rounded-2xl bg-[var(--p-brand)] text-[var(--p-on-brand)] font-black flex items-center justify-center shadow-md border-4 border-[var(--p-brand)] transition-all transform animate-in zoom-in-90"
+                  >
+                    {char.toUpperCase()}
+                  </div>
+                ) : (
+                  <div
+                    key={index}
+                    style={{
+                      width: `${cardWidth}px`,
+                      height: `${cardHeight}px`,
+                    }}
+                    className="shrink-0 rounded-2xl border-4 border-dashed border-[var(--p-line-strong)] bg-[var(--p-panel-2)] flex items-center justify-center text-transparent"
+                  >
+                    ?
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Full Keyboard below: A-Z + Ñ (27 letters) */}
@@ -117,11 +151,11 @@ export const HangmanArena: React.FC<HangmanArenaProps> = ({ stage }) => {
             const isCorrect = isGuessed && normalizedTargetChars.has(norm);
             const isWrong = isGuessed && !normalizedTargetChars.has(norm);
 
-            let keyClasses = 'bg-[#15173A] border-[#2A2D5C] text-white hover:border-[#4B5299]';
+            let keyClasses = 'bg-[var(--p-panel)] border-[var(--p-line)] text-[var(--p-text)]';
             if (isCorrect) {
-              keyClasses = 'bg-[#0F5132] border-[#4ADE80] text-[#4ADE80] font-black shadow-lg shadow-[#0F5132]/50';
+              keyClasses = 'bg-[var(--p-ok-bg)] border-[var(--p-ok)] text-[var(--p-ok)] font-black shadow-sm';
             } else if (isWrong) {
-              keyClasses = 'bg-[#3F1216] border-[#EF4444] text-[#EF4444] line-through opacity-85';
+              keyClasses = 'bg-[var(--p-err-bg)] border-[var(--p-err)] text-[var(--p-err)] line-through opacity-80';
             }
 
             return (

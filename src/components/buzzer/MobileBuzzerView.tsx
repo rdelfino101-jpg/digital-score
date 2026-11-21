@@ -3,6 +3,7 @@ import { Lock, Radio, Zap, AlertTriangle, ShieldAlert, Award, Clock } from 'luci
 import { createMasterSyncChannel } from '../../utils/masterStorageSync';
 import { BuzzerServerState, MasterSyncMessage, StudioTeam } from '../../types/masterStudio';
 import { formatMsDiff } from '../../utils/buzzerRules';
+import { mix, normalizeHex } from '../../styles/eventBrand';
 
 export const MobileBuzzerView: React.FC = () => {
   // Query parameters: ?room=K7P2&team=team-1&token=abc
@@ -28,6 +29,53 @@ export const MobileBuzzerView: React.FC = () => {
 
   const prevStatusRef = useRef<string | null>(null);
   const syncChannelRef = useRef<any>(null);
+
+  // Styles to prevent double-tap zoom, text selection, tap highlights and long-press callouts
+  const noZoomNoSelectStyle: React.CSSProperties = {
+    touchAction: 'manipulation',
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    WebkitTouchCallout: 'none',
+    WebkitTapHighlightColor: 'transparent',
+  };
+
+  // Adjust viewport meta tag while this view is mounted to prevent zooming
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const metaViewport = document.querySelector('meta[name="viewport"]');
+    const originalContent = metaViewport ? metaViewport.getAttribute('content') : 'width=device-width, initial-scale=1.0';
+
+    if (metaViewport) {
+      metaViewport.setAttribute('content', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no');
+    }
+
+    return () => {
+      if (metaViewport && originalContent) {
+        metaViewport.setAttribute('content', originalContent);
+      }
+    };
+  }, []);
+
+  // Prevent gesture zoom and double-tap zoom on iOS Safari and WebKit mobile browsers
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const preventGesture = (e: Event) => {
+      e.preventDefault();
+    };
+
+    const preventDblClick = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener('gesturestart', preventGesture, { passive: false });
+    document.addEventListener('dblclick', preventDblClick, { passive: false });
+
+    return () => {
+      document.removeEventListener('gesturestart', preventGesture);
+      document.removeEventListener('dblclick', preventDblClick);
+    };
+  }, []);
 
   // Request Screen Wake Lock so mobile display does not turn off
   useEffect(() => {
@@ -133,7 +181,7 @@ export const MobileBuzzerView: React.FC = () => {
   };
 
   // Team visual styling
-  const teamColor = teamInfo?.color || '#2563eb';
+  const teamColor = normalizeHex(teamInfo?.color || '') || '#2563EB';
   const teamName = teamInfo?.name || `Equipo ${teamId.replace('team-', '')}`;
   const teamScore = teamInfo?.score ?? 0;
 
@@ -160,7 +208,10 @@ export const MobileBuzzerView: React.FC = () => {
   // If another device replaced this phone or tokens were regenerated
   if (disconnectedReason) {
     return (
-      <div className="min-h-screen bg-[#070814] text-white flex flex-col items-center justify-center p-6 text-center select-none">
+      <div
+        className="min-h-screen bg-[#070814] text-white flex flex-col items-center justify-center p-6 text-center select-none touch-manipulation"
+        style={noZoomNoSelectStyle}
+      >
         <div className="w-24 h-24 rounded-full bg-red-950/80 border-2 border-red-500/60 flex items-center justify-center mb-6 shadow-2xl shadow-red-900/50">
           <ShieldAlert className="w-12 h-12 text-red-400" />
         </div>
@@ -175,16 +226,18 @@ export const MobileBuzzerView: React.FC = () => {
     );
   }
 
+  const screenBackground = isAnswering
+    ? teamColor
+    : status === 'open'
+    ? mix(teamColor, '#05060A', 0.55)
+    : mix(teamColor, '#05060A', 0.78);
+
   return (
     <div
       className="min-h-screen flex flex-col select-none touch-manipulation overflow-hidden"
       style={{
-        backgroundColor:
-          isAnswering
-            ? teamColor
-            : status === 'open'
-            ? '#0b0f24'
-            : '#070814',
+        ...noZoomNoSelectStyle,
+        backgroundColor: screenBackground,
         transition: 'background-color 0.3s ease',
       }}
     >
@@ -246,7 +299,7 @@ export const MobileBuzzerView: React.FC = () => {
           </div>
           <div>
             <h2 className="text-xl font-black text-white leading-tight drop-shadow">{teamName}</h2>
-            <span className="text-xs font-bold text-white/70 uppercase tracking-wider">Pulsador Oficial</span>
+            <span className="text-xs font-bold text-white/75 tracking-wider">Pulsador del equipo</span>
           </div>
         </div>
 
@@ -302,7 +355,8 @@ export const MobileBuzzerView: React.FC = () => {
           <div className="w-full flex flex-col items-center justify-center">
             <button
               onPointerDown={handleBuzzerPress}
-              className="w-[280px] h-[280px] rounded-full bg-red-600 border-8 border-red-400 text-white flex flex-col items-center justify-center shadow-2xl shadow-red-900/60 active:scale-95 transition-all select-none"
+              className="w-[280px] h-[280px] rounded-full bg-red-600 border-8 border-red-400 text-white flex flex-col items-center justify-center shadow-2xl shadow-red-900/60 active:scale-95 transition-all select-none touch-manipulation cursor-pointer"
+              style={noZoomNoSelectStyle}
             >
               <ShieldAlert className="w-16 h-16 mb-2 animate-bounce" />
               <span className="text-3xl font-black uppercase tracking-wider">BLOQUEADO</span>
@@ -322,6 +376,7 @@ export const MobileBuzzerView: React.FC = () => {
                 isPressing ? 'scale-90 brightness-150' : 'scale-100 hover:scale-105 active:scale-95'
               }`}
               style={{
+                ...noZoomNoSelectStyle,
                 backgroundColor: teamColor,
                 boxShadow: `0 0 60px ${teamColor}88, 0 0 100px ${teamColor}44`,
                 border: '10px solid rgba(255, 255, 255, 0.4)',
@@ -353,9 +408,10 @@ export const MobileBuzzerView: React.FC = () => {
           <div className="w-full flex flex-col items-center justify-center">
             <button
               onPointerDown={handleBuzzerPress}
-              className={`w-[280px] h-[280px] rounded-full bg-slate-800/90 border-8 border-slate-700/80 text-slate-400 flex flex-col items-center justify-center shadow-xl active:scale-95 transition-all select-none ${
+              className={`w-[280px] h-[280px] rounded-full bg-slate-800/90 border-8 border-slate-700/80 text-slate-400 flex flex-col items-center justify-center shadow-xl active:scale-95 transition-all select-none touch-manipulation cursor-pointer ${
                 isPressing ? 'scale-95 bg-red-950/60 border-red-500' : ''
               }`}
+              style={noZoomNoSelectStyle}
             >
               <Lock className="w-16 h-16 mb-2 text-slate-500" />
               <span className="text-4xl font-black tracking-tight text-slate-300">Espera…</span>
@@ -370,9 +426,9 @@ export const MobileBuzzerView: React.FC = () => {
       </main>
 
       {/* Footer Info */}
-      <footer className="p-3 bg-black/40 text-center text-[11px] text-slate-400 border-t border-white/10 flex items-center justify-between">
-        <span>Master Studio · Modo Pulsador</span>
-        <span className="font-mono text-slate-400">ID: {teamId}</span>
+      <footer className="p-3 bg-black/40 text-center text-[11px] text-slate-300 border-t border-white/10 flex items-center justify-between">
+        <span>Scoreboard Studio · Modo Pulsador</span>
+        <span className="font-mono text-slate-300">ID: {teamId}</span>
       </footer>
     </div>
   );

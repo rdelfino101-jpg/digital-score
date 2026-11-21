@@ -6,6 +6,7 @@ import { ProjectorClock } from './common/ProjectorClock';
 import { TimerBar } from './common/TimerBar';
 import { TurnPill } from './common/TurnPill';
 import { TeamBand } from './common/TeamBand';
+import { ScaleToFit } from './common/ScaleToFit';
 
 import { BibleBookArena } from './games/BibleBookArena';
 import { WhoSaidItArena } from './games/WhoSaidItArena';
@@ -27,31 +28,43 @@ export const GameStageDisplay: React.FC<GameStageDisplayProps> = ({ state }) => 
   const { activeGameId } = gameStage;
   const activeTeam = teams.find((t) => t.id === turn.activeTeamId);
   const isLargeTeamCount = teams.length >= 5;
+  const isSingleTeamGame = activeGameId === 'millionaire_show' || activeGameId === 'deal_or_nodeal';
 
   const isTimerWarning = timer.mode === 'countdown' && timer.secondsRemaining <= 10 && timer.secondsRemaining > 0;
   const isTimerFinished = timer.mode === 'countdown' && timer.secondsRemaining === 0 && !timer.isRunning;
 
-  // Header Right Slot: TurnPill + Steal badge + ProjectorClock + Buzzer Open Badge
+  // Header Right Slot: TurnPill + Steal badge + ProjectorClock + Buzzer Open Badge + Single Team Chip
   const headerRightSlot = (
     <div className="flex items-center gap-4">
       {buzzer?.status === 'open' && (
-        <span className="flex items-center gap-2 rounded-2xl bg-amber-500 px-5 py-2 font-projector text-[22px] font-black uppercase tracking-wider text-slate-950 shadow-xl border-2 border-yellow-200 animate-pulse">
-          <Zap className="h-6 w-6 fill-current text-slate-950 animate-bounce" />
+        <span className="flex items-center gap-2 rounded-2xl bg-[var(--p-accent)] px-5 py-2 font-projector text-[22px] font-black uppercase tracking-wider text-[var(--p-on-accent)] shadow-md border-2 border-[var(--p-line-strong)] animate-pulse">
+          <Zap className="h-6 w-6 fill-current animate-bounce" />
           PULSADORES ABIERTOS
         </span>
       )}
       {turn.stealMode && (
-        <span className="flex items-center gap-2 rounded-2xl bg-red-600 px-5 py-2 font-projector text-[22px] font-black uppercase tracking-wider text-white shadow-xl animate-pulse">
+        <span className="flex items-center gap-2 rounded-2xl bg-[var(--p-err)] px-5 py-2 font-projector text-[22px] font-black uppercase tracking-wider text-[var(--p-err-bg)] shadow-md animate-pulse">
           <AlertOctagon className="h-6 w-6" />
           ¡ROBO DE PUNTOS!
         </span>
       )}
-      {activeTeam && (
-        <TurnPill
-          teamName={activeTeam.name}
-          teamColor={activeTeam.color}
-          label="En Turno"
-        />
+      {isSingleTeamGame && activeTeam ? (
+        <div
+          className="flex items-center gap-3 rounded-2xl bg-[var(--p-panel)] border-2 border-[var(--p-accent-ink)] px-5 py-2 font-projector text-[22px] font-black text-[var(--p-text)] shadow-sm"
+          style={{ borderLeftColor: activeTeam.color, borderLeftWidth: '8px' }}
+        >
+          <span>Juega: {activeTeam.name}</span>
+          <span className="text-[var(--p-text-3)]">·</span>
+          <span className="text-[var(--p-accent-ink)] tabular-numbers">{activeTeam.score} pts</span>
+        </div>
+      ) : (
+        activeTeam && (
+          <TurnPill
+            teamName={activeTeam.name}
+            teamColor={activeTeam.color}
+            label="En Turno"
+          />
+        )
       )}
       {hudToggles.showTimer && timer.mode !== 'off' && (
         <ProjectorClock
@@ -66,14 +79,14 @@ export const GameStageDisplay: React.FC<GameStageDisplayProps> = ({ state }) => 
 
   return (
     <div className="flex h-full w-full flex-col justify-between select-none animate-projector-wipe">
-      {/* 1. PROJECTOR HEADER (Kicker 24px, Title 58px, Right slot) */}
+      {/* 1. PROJECTOR HEADER */}
       <ProjectorHeader
         kicker="Game Show Studio"
         title={getGameNameLabel(activeGameId)}
         rightSlot={headerRightSlot}
       />
 
-      {/* 2. TIMER BAR (14px gold fill emptying over time if countdown is active) */}
+      {/* 2. TIMER BAR */}
       {hudToggles.showTimer && timer.mode === 'countdown' && timer.initialSeconds > 0 && (
         <div className="pt-3">
           <TimerBar
@@ -84,25 +97,24 @@ export const GameStageDisplay: React.FC<GameStageDisplayProps> = ({ state }) => 
         </div>
       )}
 
-      {/* 3. MAIN ARENA LAYOUT:
-          - If 5-10 teams: Horizontal layout (Main Arena flex-1 + TeamBand 600px column on the right)
-          - If 2-4 teams: Vertical layout (Main Arena flex-1 + TeamBand bottom horizontal band)
-      */}
-      <div className={`my-auto flex flex-1 min-h-0 items-center justify-center py-3 w-full ${isLargeTeamCount ? 'gap-8' : 'flex-col'}`}>
-        <main className="relative z-10 flex flex-1 min-h-0 items-stretch justify-center w-full min-w-0">
-          {activeGameId === 'bible_book' && gameStage?.bibleBook && <BibleBookArena stage={gameStage.bibleBook} />}
-          {activeGameId === 'who_said_it' && gameStage?.whoSaidIt && <WhoSaidItArena stage={gameStage.whoSaidIt} />}
-          {activeGameId === 'hangman' && gameStage?.hangman && <HangmanArena stage={gameStage.hangman} />}
-          {activeGameId === 'charades' && gameStage?.charades && <CharadesArena stage={gameStage.charades} />}
-          {activeGameId === 'family_feud' && gameStage?.familyFeud && <FamilyFeudArena stage={gameStage.familyFeud} />}
-          {activeGameId === 'trivia_show' && gameStage?.triviaShow && <TriviaShowArena stage={gameStage.triviaShow} />}
-          {activeGameId === 'anagram_wheel' && gameStage?.anagramWheel && <AnagramWheelArena stage={gameStage.anagramWheel} />}
-          {activeGameId === 'music_karaoke' && gameStage?.musicKaraoke && <MusicKaraokeArena stage={gameStage.musicKaraoke} />}
-          {activeGameId === 'millionaire_show' && gameStage?.millionaireShow && <MillionaireArena stage={gameStage.millionaireShow} />}
-          {activeGameId === 'deal_or_nodeal' && gameStage?.dealOrNoDeal && <DealOrNoDealArena stage={gameStage.dealOrNoDeal} />}
-        </main>
+      {/* 3. MAIN ARENA LAYOUT */}
+      <div className={`my-auto flex flex-1 min-h-0 items-center justify-center py-3 w-full ${!isSingleTeamGame && isLargeTeamCount ? 'gap-8' : 'flex-col'}`}>
+        <ScaleToFit className="relative z-10 w-full">
+          <main className="flex flex-1 min-h-0 items-stretch justify-center w-full min-w-0">
+            {activeGameId === 'bible_book' && gameStage?.bibleBook && <BibleBookArena stage={gameStage.bibleBook} />}
+            {activeGameId === 'who_said_it' && gameStage?.whoSaidIt && <WhoSaidItArena stage={gameStage.whoSaidIt} />}
+            {activeGameId === 'hangman' && gameStage?.hangman && <HangmanArena stage={gameStage.hangman} />}
+            {activeGameId === 'charades' && gameStage?.charades && <CharadesArena stage={gameStage.charades} />}
+            {activeGameId === 'family_feud' && gameStage?.familyFeud && <FamilyFeudArena stage={gameStage.familyFeud} />}
+            {activeGameId === 'trivia_show' && gameStage?.triviaShow && <TriviaShowArena stage={gameStage.triviaShow} />}
+            {activeGameId === 'anagram_wheel' && gameStage?.anagramWheel && <AnagramWheelArena stage={gameStage.anagramWheel} />}
+            {activeGameId === 'music_karaoke' && gameStage?.musicKaraoke && <MusicKaraokeArena stage={gameStage.musicKaraoke} />}
+            {activeGameId === 'millionaire_show' && gameStage?.millionaireShow && <MillionaireArena stage={gameStage.millionaireShow} />}
+            {activeGameId === 'deal_or_nodeal' && gameStage?.dealOrNoDeal && <DealOrNoDealArena stage={gameStage.dealOrNoDeal} />}
+          </main>
+        </ScaleToFit>
 
-        {isLargeTeamCount && (
+        {!isSingleTeamGame && isLargeTeamCount && (
           <TeamBand
             teams={teams}
             activeTeamId={turn.activeTeamId}
@@ -111,8 +123,8 @@ export const GameStageDisplay: React.FC<GameStageDisplayProps> = ({ state }) => 
         )}
       </div>
 
-      {/* 4. BOTTOM TEAM BAND FOR 2-4 TEAMS */}
-      {!isLargeTeamCount && (
+      {/* 4. BOTTOM TEAM BAND FOR 2-4 TEAMS (Suppressed in single-team games) */}
+      {!isSingleTeamGame && !isLargeTeamCount && (
         <TeamBand
           teams={teams}
           activeTeamId={turn.activeTeamId}
