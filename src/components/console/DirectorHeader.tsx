@@ -172,6 +172,15 @@ export const DirectorHeader: React.FC<DirectorHeaderProps> = ({
         </button>
 
         <button
+          onClick={onOpenExcelModal}
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-[var(--c-line)] bg-[var(--c-panel-2)] px-2.5 text-[13px] font-semibold text-[var(--c-text)] transition-colors hover:border-[var(--c-line-strong)]"
+          title={`Cargar o descargar Excel: preguntas de los juegos y participantes del sorteo. Hoy hay ${totalBankItems} preguntas guardadas.`}
+        >
+          <FileSpreadsheet className="h-4 w-4 text-emerald-400" strokeWidth={2.2} />
+          <span>Excel</span>
+        </button>
+
+        <button
           onClick={onOpenProjectorWindow}
           className="flex h-9 items-center gap-1.5 rounded-lg bg-[var(--c-accent)] px-3 text-[13px] font-bold text-white transition-colors hover:bg-blue-500"
           title="Abrir la pantalla del proyector en otra ventana"
@@ -220,8 +229,8 @@ export const DirectorHeader: React.FC<DirectorHeaderProps> = ({
               <MenuItem
                 icon={FileSpreadsheet}
                 onClick={ejecutar(onOpenExcelModal)}
-                label="Banco de preguntas"
-                detalle={`${totalBankItems} preguntas · Excel y nube`}
+                label="Cargar Excel y nube"
+                detalle={`Preguntas y participantes · ${totalBankItems} preguntas guardadas`}
               />
               <MenuItem icon={Palette} onClick={ejecutar(onOpenThemeModal)} label="Marca y fondo del proyector" detalle="Nombre, logo y colores" />
               <div className="my-1.5 border-t border-[var(--c-line)]" />

@@ -1,51 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   MasterLiveState,
   MasterViewMode,
   ActiveGameId,
-  StudioTeam,
   RemoteCommandType,
+  RaffleMode,
 } from '../../types/masterStudio';
 import {
+  Users,
+  Gamepad2,
   Zap,
+  Monitor,
+  Gift,
+  Volume2,
   ChevronLeft,
   ChevronRight,
-  Flame,
-  Volume2,
+  Undo2,
+  Vibrate,
+  LogOut,
+  Lock,
+  KeyRound,
+  X,
   Tv,
-  Gamepad2,
   Trophy,
   Award,
   EyeOff,
-  Clock,
   Play,
   Pause,
   RotateCcw,
   Sparkles,
-  Wifi,
-  WifiOff,
-  Vibrate,
-  BookOpen,
-  MessageSquareQuote,
-  Keyboard,
-  Hourglass,
-  Users2,
-  HelpCircle,
-  Dices,
-  CheckCircle,
-  XCircle,
+  Check,
   Eye,
   Radio,
-  Gift,
-  Music,
-  Briefcase,
-  Lock,
-  Unlock,
-  KeyRound,
-  X,
 } from 'lucide-react';
 import { formatTimeDisplay } from '../../utils/gameEngineRules';
-import { mensajeErrorRemoto } from '../../utils/textosInterfaz';
+import { mensajeErrorRemoto, nombreEscena } from '../../utils/textosInterfaz';
 
 interface MobileTactileRemoteViewProps {
   masterState: MasterLiveState | null;
@@ -58,6 +47,65 @@ interface MobileTactileRemoteViewProps {
   onAuthenticate?: (pin: string) => void;
 }
 
+type Pestana = 'equipos' | 'juego' | 'pulsadores' | 'pantalla' | 'sorteo' | 'sonidos';
+
+const PESTANAS: Array<{ id: Pestana; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'equipos', label: 'Equipos', icon: Users },
+  { id: 'juego', label: 'Juego', icon: Gamepad2 },
+  { id: 'pulsadores', label: 'Pulsador', icon: Zap },
+  { id: 'pantalla', label: 'Pantalla', icon: Monitor },
+  { id: 'sorteo', label: 'Sorteo', icon: Gift },
+  { id: 'sonidos', label: 'Sonidos', icon: Volume2 },
+];
+
+const JUEGOS: Array<{ id: ActiveGameId; label: string }> = [
+  { id: 'bible_book', label: '¿En qué libro?' },
+  { id: 'who_said_it', label: '¿Quién lo dijo?' },
+  { id: 'hangman', label: 'Ahorcado' },
+  { id: 'charades', label: 'Charadas' },
+  { id: 'family_feud', label: '100 Dijeron' },
+  { id: 'trivia_show', label: 'Trivia' },
+  { id: 'anagram_wheel', label: 'Anagrama' },
+  { id: 'music_karaoke', label: 'Música' },
+  { id: 'millionaire_show', label: 'Millonario' },
+  { id: 'deal_or_nodeal', label: 'Trato Hecho' },
+];
+
+const ESCENAS: Array<{ mode: MasterViewMode; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { mode: 'SCOREBOARD_ONLY', label: 'Marcador', icon: Tv },
+  { mode: 'GAME_STAGE', label: 'Juego', icon: Gamepad2 },
+  { mode: 'RAFFLE_STAGE', label: 'Sorteo', icon: Gift },
+  { mode: 'LEADERBOARD_FULL', label: 'Posiciones', icon: Trophy },
+  { mode: 'PODIUM_CELEBRATION', label: 'Podio', icon: Award },
+  { mode: 'BLACKOUT', label: 'Pausa', icon: EyeOff },
+];
+
+const MODOS_SORTEO: Array<{ id: RaffleMode; label: string }> = [
+  { id: 'wheel', label: 'Ruleta' },
+  { id: 'slot_machine', label: 'Retos' },
+  { id: 'tombola_numbers', label: 'Tómbola' },
+  { id: 'team_matcher', label: 'Emparejador' },
+];
+
+const SONIDOS: Array<{ id: string; label: string; icon: string }> = [
+  { id: 'correct', label: 'Acierto', icon: '🔔' },
+  { id: 'error', label: 'Error', icon: '❌' },
+  { id: 'turn', label: 'Cambio de turno', icon: '🔄' },
+  { id: 'timesUp', label: 'Fin del tiempo', icon: '🎺' },
+  { id: 'fanfare', label: 'Fanfarria', icon: '🎉' },
+  { id: 'drumroll', label: 'Redoble', icon: '🥁' },
+  { id: 'splash', label: 'Al agua', icon: '💦' },
+  { id: 'wheel', label: 'Ruleta', icon: '🎡' },
+];
+
+const LETRAS = 'ABCDEFGHIJKLMNÑOPQRSTUVWXYZ'.split('');
+const sinAcento = (c: string) => c.normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+
+/**
+ * Control remoto para el celular del director.
+ * Tiene todo lo que se usa en vivo: equipos y puntos, el juego activo con su ficha
+ * secreta, pulsadores, pantalla (escenas, reloj, ronda, cintillo), sorteo y sonidos.
+ */
 export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = ({
   masterState,
   onSendCommand,
@@ -68,868 +116,1064 @@ export const MobileTactileRemoteView: React.FC<MobileTactileRemoteViewProps> = (
   authError,
   onAuthenticate,
 }) => {
-  const [hapticEnabled, setHapticEnabled] = useState(true);
-  const [activeTab, setActiveTab] = useState<'points' | 'scenes' | 'games' | 'sounds' | 'buzzers'>('points');
-  const [showPinModal, setShowPinModal] = useState<boolean>(!isAuthenticated);
-  const [pinInput, setPinInput] = useState('');
-  const [localPinError, setLocalPinError] = useState<string | null>(() => mensajeErrorRemoto(authError));
+  const [vibracion, setVibracion] = useState(true);
+  const [pestana, setPestana] = useState<Pestana>('equipos');
+  const [verPin, setVerPin] = useState<boolean>(!isAuthenticated);
+  const [pin, setPin] = useState('');
+  const [errorPin, setErrorPin] = useState<string | null>(() => mensajeErrorRemoto(authError));
+  const [borradorCintillo, setBorradorCintillo] = useState<string | null>(null);
+  const [confirmarReinicioSorteo, setConfirmarReinicioSorteo] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
-      setShowPinModal(false);
-      setLocalPinError(null);
+      setVerPin(false);
+      setErrorPin(null);
     }
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (authError) {
-      setLocalPinError(mensajeErrorRemoto(authError));
-    }
+    if (authError) setErrorPin(mensajeErrorRemoto(authError));
   }, [authError]);
 
-  // Requirement 4: buttons disabled while disconnected or without operator PIN
-  const isActionDisabled = connectionStatus !== 'connected' || !isAuthenticated;
+  const bloqueado = connectionStatus !== 'connected' || !isAuthenticated;
 
-  // Trigger tactile vibration on phone tap
-  const triggerHaptic = (ms = 35) => {
-    if (hapticEnabled && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+  const vibrar = (ms = 35) => {
+    if (vibracion && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate(ms);
       } catch {
-        // ignore
+        // sin vibración
       }
     }
   };
 
-  const handleCommand = (cmd: RemoteCommandType, payload?: any, hapticMs = 40) => {
-    if (isActionDisabled) {
-      if (!isAuthenticated) {
-        setShowPinModal(true);
-      }
+  const enviar = (cmd: RemoteCommandType, payload?: any, ms = 40) => {
+    if (bloqueado) {
+      if (!isAuthenticated) setVerPin(true);
       return;
     }
-    triggerHaptic(hapticMs);
+    vibrar(ms);
     onSendCommand(cmd, payload);
   };
 
-  const handlePinSubmit = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanPin = pinInput.trim();
-    if (cleanPin.length !== 4 || !/^\d{4}$/.test(cleanPin)) {
-      setLocalPinError('El PIN debe tener exactamente 4 dígitos numéricos.');
+  const enviarPin = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const limpio = pin.trim();
+    if (!/^\d{4}$/.test(limpio)) {
+      setErrorPin('El PIN tiene 4 números.');
       return;
     }
-    setLocalPinError(null);
-    onAuthenticate?.(cleanPin);
+    setErrorPin(null);
+    onAuthenticate?.(limpio);
   };
 
   if (!masterState) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#070b14] p-6 text-center text-slate-100 select-none">
-        <div className="mb-4 h-16 w-16 rounded-2xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-blue-400">
-          <Radio className="h-8 w-8 animate-pulse" />
-        </div>
-        <h1 className="text-xl font-black uppercase tracking-wider text-white">
-          Conectando Control Remoto...
-        </h1>
-        <p className="mt-2 text-xs text-slate-400">
-          Sala <strong className="text-amber-400 font-mono tracking-widest">{roomCode}</strong> &bull; {connectionStatus === 'connected' ? 'Conectado' : 'Sin conexión – reintentando'}
+      <div className="consola flex min-h-screen flex-col items-center justify-center p-6 text-center select-none">
+        <Radio className="mb-4 h-10 w-10 text-[var(--c-text-3)]" />
+        <h1 className="text-[18px] font-bold">Conectando el control remoto…</h1>
+        <p className="mt-2 text-[14px] text-[var(--c-text-3)]">
+          Sala <strong className="font-mono text-[var(--c-text)]">{roomCode}</strong> ·{' '}
+          {connectionStatus === 'connected' ? 'Conectado' : 'Sin conexión, reintentando'}
         </p>
       </div>
     );
   }
 
-  const activeTeam =
-    masterState.teams.find((t) => t.id === masterState.turn.activeTeamId) ||
-    masterState.teams[0];
-
-  const gameOptions: Array<{ id: ActiveGameId; label: string; icon: any }> = [
-    { id: 'bible_book', label: 'Biblia', icon: BookOpen },
-    { id: 'who_said_it', label: 'Citas', icon: MessageSquareQuote },
-    { id: 'hangman', label: 'Ahorcado', icon: Keyboard },
-    { id: 'charades', label: 'Charadas', icon: Hourglass },
-    { id: 'family_feud', label: '100 Dijeron', icon: Users2 },
-    { id: 'trivia_show', label: 'Trivia', icon: HelpCircle },
-    { id: 'anagram_wheel', label: 'Ruleta', icon: Dices },
-    { id: 'music_karaoke', label: 'Música & Karaoke', icon: Music },
-    { id: 'millionaire_show', label: 'Millonario', icon: Trophy },
-    { id: 'deal_or_nodeal', label: 'Trato Hecho', icon: Briefcase },
-  ];
+  const s = masterState;
+  const enTurno = s.teams.find((t) => t.id === s.turn.activeTeamId) || s.teams[0];
+  const b = s.buzzer;
+  const nombreEquipo = (id?: string | null) => s.teams.find((t) => t.id === id)?.name || 'Equipo';
+  const conectados = Object.values(b?.connectedClients || {}).filter((c) => c.connected).length;
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#050811] text-white font-sans select-none pb-24 touch-manipulation">
-      {/* Top Mobile Bar: Honest connection status, Room badge, PIN button, Haptic toggle, Exit */}
-      <header className="sticky top-0 z-40 bg-[#090e1d]/95 backdrop-blur-md border-b border-slate-800 px-3.5 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {/* Requirement 4: Honest Indicator */}
-          <div
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold ${
-              connectionStatus === 'connected'
-                ? isAuthenticated
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                : 'bg-red-500/20 text-red-300 border border-red-500/40 animate-pulse'
-            }`}
-          >
-            {connectionStatus === 'connected' ? (
-              <Wifi className="w-3.5 h-3.5" />
-            ) : (
-              <WifiOff className="w-3.5 h-3.5" />
-            )}
-            <span>
-              {connectionStatus === 'connected'
-                ? isAuthenticated
-                  ? 'Conectado'
-                  : 'Conectado (Lectura)'
-                : 'Sin conexión – reintentando'}
-            </span>
+    <div className="consola flex min-h-screen select-none flex-col pb-[76px] touch-manipulation">
+      {/* Encabezado */}
+      <header className="sticky top-0 z-40 border-b border-[var(--c-line)] bg-[var(--c-panel)]/95 px-3 py-2.5 backdrop-blur">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span
+              className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                connectionStatus !== 'connected' ? 'bg-red-500' : isAuthenticated ? 'bg-emerald-500' : 'bg-amber-400'
+              }`}
+              aria-hidden
+            />
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-bold leading-tight">
+                Sala <span className="font-mono tracking-[0.08em]">{roomCode}</span>
+              </p>
+              <p className="truncate text-[12px] leading-tight text-[var(--c-text-3)]">
+                {connectionStatus !== 'connected'
+                  ? 'Sin conexión, reintentando…'
+                  : !isAuthenticated
+                  ? 'Solo lectura: falta el PIN'
+                  : `En pantalla: ${nombreEscena(s.viewMode)}`}
+              </p>
+            </div>
           </div>
-
-          <span className="text-[10px] font-black font-mono tracking-wider text-amber-400 px-1.5 py-0.5 rounded bg-slate-900 border border-amber-500/30">
-            {roomCode}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          {/* PIN Lock status / re-auth button */}
-          <button
-            onClick={() => setShowPinModal(true)}
-            className={`px-2 py-1 rounded-xl text-xs flex items-center gap-1 font-bold border transition-colors ${
-              isAuthenticated
-                ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300'
-                : 'bg-amber-950/80 border-amber-500/60 text-amber-200 animate-pulse'
-            }`}
-            title={isAuthenticated ? 'PIN verificado. Modo Operador Activo.' : 'Haz clic para ingresar PIN de Operador'}
-          >
-            {isAuthenticated ? <Unlock className="w-3.5 h-3.5 text-emerald-400" /> : <Lock className="w-3.5 h-3.5 text-amber-400" />}
-            <span className="text-[10px]">{isAuthenticated ? 'PIN OK' : 'PIN'}</span>
-          </button>
-
-          <button
-            onClick={() => setHapticEnabled(!hapticEnabled)}
-            className={`p-2 rounded-xl text-xs transition-colors ${
-              hapticEnabled
-                ? 'bg-blue-600/30 text-blue-300 border border-blue-500/40'
-                : 'bg-slate-800 text-slate-500'
-            }`}
-            title="Vibración táctil al presionar botones"
-          >
-            <Vibrate className="w-4 h-4" />
-          </button>
-
-          {onExitRemote && (
-            <button
-              onClick={onExitRemote}
-              className="px-2.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:text-white"
+          <div className="flex shrink-0 items-center gap-1">
+            {!isAuthenticated && (
+              <button
+                onClick={() => setVerPin(true)}
+                className="flex h-9 items-center gap-1.5 rounded-lg bg-amber-500 px-3 text-[13px] font-bold text-slate-950"
+              >
+                <Lock className="h-4 w-4" />
+                PIN
+              </button>
+            )}
+            <BotonIcono etiqueta="Deshacer" onClick={() => enviar('UNDO_LAST_ACTION', null, 50)} disabled={bloqueado}>
+              <Undo2 className="h-5 w-5" />
+            </BotonIcono>
+            <BotonIcono
+              etiqueta={vibracion ? 'Vibración activada' : 'Vibración apagada'}
+              onClick={() => setVibracion((v) => !v)}
+              activo={vibracion}
             >
-              Salir
-            </button>
-          )}
+              <Vibrate className="h-5 w-5" />
+            </BotonIcono>
+            {onExitRemote && (
+              <BotonIcono etiqueta="Salir del control remoto" onClick={onExitRemote}>
+                <LogOut className="h-5 w-5" />
+              </BotonIcono>
+            )}
+          </div>
         </div>
       </header>
 
-      {/* Disconnected / Unauthenticated Warning Banners */}
-      {connectionStatus !== 'connected' && (
-        <div className="bg-red-950/90 border-b border-red-500/50 px-3.5 py-2 flex items-center gap-2 text-xs text-red-200">
-          <WifiOff className="w-4 h-4 text-red-400 shrink-0" />
-          <span>Sin conexión – reintentando sincronizar. Los controles táctiles están inhabilitados.</span>
-        </div>
-      )}
+      <main className="flex-1 space-y-4 p-3">
+        {/* ---------------- EQUIPOS ---------------- */}
+        {pestana === 'equipos' && (
+          <>
+            {enTurno && (
+              <section className="relative overflow-hidden rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3.5">
+                <span className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: enTurno.color }} aria-hidden />
+                <div className="flex items-center justify-between gap-3 pl-1">
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold text-amber-300">En turno</p>
+                    <p className="line-clamp-2 text-[19px] font-bold leading-tight">{enTurno.name}</p>
+                  </div>
+                  <p className="font-mono text-[34px] font-black leading-none">{enTurno.score}</p>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Boton tipo="neutro" grande onClick={() => enviar('PREV_TURN')} disabled={bloqueado}>
+                    <ChevronLeft className="h-5 w-5" /> Anterior
+                  </Boton>
+                  <Boton tipo="accion" grande onClick={() => enviar('NEXT_TURN')} disabled={bloqueado}>
+                    Siguiente <ChevronRight className="h-5 w-5" />
+                  </Boton>
+                </div>
+                <div className="mt-3 space-y-1">
+                  <Interruptor activo={s.turn.stealMode} etiqueta="Robo de puntos" onClick={() => enviar('TOGGLE_STEAL')} disabled={bloqueado} />
+                  <Interruptor
+                    activo={s.turn.autoAdvanceOnScore}
+                    etiqueta="Pasar turno al sumar puntos"
+                    onClick={() => enviar('TOGGLE_AUTO_ADVANCE')}
+                    disabled={bloqueado}
+                  />
+                </div>
+              </section>
+            )}
 
-      {connectionStatus === 'connected' && !isAuthenticated && (
-        <div className="bg-amber-950/80 border-b border-amber-500/50 px-3.5 py-2 flex items-center justify-between text-xs text-amber-200">
-          <div className="flex items-center gap-2 min-w-0">
-            <Lock className="w-4 h-4 text-amber-400 shrink-0" />
-            <span className="truncate">Modo Solo Lectura. Ingresa el PIN de operador para sumar puntos.</span>
-          </div>
-          <button
-            onClick={() => setShowPinModal(true)}
-            className="ml-2 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] shrink-0"
-          >
-            Ingresar PIN
-          </button>
-        </div>
-      )}
-
-      {/* Hero Active Team & Big Turn Switcher */}
-      <section className="p-3.5 bg-gradient-to-b from-[#0c1329] to-[#080d1a] border-b border-slate-800">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 fill-amber-400" />
-            <span>Turno Activo</span>
-          </span>
-
-          <div className="flex items-center gap-1.5">
-            {/* Requirement 6: Botón Deshacer en Remoto */}
-            <button
-              onClick={() => handleCommand('UNDO_LAST_ACTION', null, 50)}
-              disabled={isActionDisabled}
-              className={`px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow flex items-center gap-1 ${
-                isActionDisabled
-                  ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500 border border-slate-800'
-                  : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40 active:scale-95'
-              }`}
-              title="Deshacer último puntaje / turno"
-            >
-              <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-              <span>Deshacer</span>
-            </button>
-
-            {/* Steal Mode Button */}
-            <button
-              onClick={() => handleCommand('TOGGLE_STEAL', null, 60)}
-              disabled={isActionDisabled}
-              className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider transition-all shadow ${
-                isActionDisabled
-                  ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500'
-                  : masterState.turn.stealMode
-                  ? 'bg-amber-500 text-slate-950 ring-2 ring-amber-300 animate-pulse'
-                  : 'bg-slate-800 text-slate-400'
-              }`}
-            >
-              🔥 Robo: {masterState.turn.stealMode ? 'ON' : 'OFF'}
-            </button>
-          </div>
-        </div>
-
-        {/* Big Active Team Card */}
-        {activeTeam && (
-          <div
-            className="p-3.5 rounded-2xl border-2 flex items-center justify-between shadow-2xl transition-all"
-            style={{
-              borderColor: activeTeam.color,
-              backgroundColor: `${activeTeam.color}22`,
-            }}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <span
-                className="w-5 h-5 rounded-full block shrink-0 shadow-md ring-2 ring-white/30"
-                style={{ backgroundColor: activeTeam.color }}
-              />
-              <div className="min-w-0">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                  Respondiendo ahora:
-                </span>
-                <span className="text-lg font-black text-white truncate block">
-                  {activeTeam.name}
-                </span>
-              </div>
-            </div>
-
-            <div className="text-right shrink-0">
-              <span className="text-3xl font-black font-mono text-white leading-none">
-                {activeTeam.score}
-              </span>
-              <span className="text-[10px] uppercase font-black text-slate-400 block">PTS</span>
-            </div>
-          </div>
-        )}
-
-        {/* Massive Turn Navigation Touch Targets */}
-        <div className="grid grid-cols-2 gap-2 mt-3">
-          <button
-            onClick={() => handleCommand('PREV_TURN', null, 50)}
-            disabled={isActionDisabled}
-            className={`py-3.5 px-3 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 shadow transition-all border ${
-              isActionDisabled
-                ? 'opacity-40 cursor-not-allowed bg-slate-900 border-slate-800 text-slate-500'
-                : 'bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 border-slate-700'
-            }`}
-          >
-            <ChevronLeft className="w-5 h-5" />
-            <span>&lt;&lt; Turno Anterior</span>
-          </button>
-          <button
-            onClick={() => handleCommand('NEXT_TURN', null, 50)}
-            disabled={isActionDisabled}
-            className={`py-3.5 px-3 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 shadow-lg transition-all ${
-              isActionDisabled
-                ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500 border border-slate-800'
-                : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white shadow-blue-600/30'
-            }`}
-          >
-            <span>Siguiente Turno &gt;&gt;</span>
-            <ChevronRight className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Quick Team Chips Selector */}
-        <div className="flex overflow-x-auto gap-1.5 mt-2.5 pt-2 border-t border-slate-800/80 no-scrollbar">
-          {masterState.teams.map((team) => {
-            const isSelected = team.id === masterState.turn.activeTeamId;
-            return (
-              <button
-                key={team.id}
-                onClick={() => handleCommand('SELECT_TURN', { teamId: team.id }, 35)}
-                disabled={isActionDisabled}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all shrink-0 ${
-                  isActionDisabled
-                    ? 'opacity-40 cursor-not-allowed bg-slate-950 text-slate-600 border border-slate-800'
-                    : isSelected
-                    ? 'bg-blue-600 text-white shadow ring-2 ring-white/30'
-                    : 'bg-slate-900 text-slate-400 border border-slate-800'
-                }`}
-              >
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: team.color }}
-                />
-                <span>{team.name}</span>
-                <span className="font-mono text-[11px] font-black opacity-80">
-                  {team.score}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Main Tactile Content based on selected Tab */}
-      <main className="flex-1 p-3.5 space-y-4">
-        {/* Tab 1: Giant Scoring Buttons */}
-        {activeTab === 'points' && (
-          <div className="space-y-3 animate-fadeIn">
-            {/* Primary Action Buttons: Big Green Correct & Big Red Strike */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() =>
-                  handleCommand(
-                    'AWARD_POINTS',
-                    {
-                      teamId: activeTeam?.id,
-                      points: 100,
-                      actionName: 'Acierto Móvil',
-                    },
-                    70
-                  )
-                }
-                disabled={isActionDisabled}
-                className={`py-5 px-3 rounded-2xl font-black text-base shadow-lg border-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                  isActionDisabled
-                    ? 'opacity-40 cursor-not-allowed bg-slate-900 border-slate-800 text-slate-500'
-                    : 'bg-gradient-to-b from-emerald-500 to-emerald-700 active:scale-95 text-white shadow-emerald-900/40 border-emerald-400/50'
-                }`}
-              >
-                <CheckCircle className="w-7 h-7" />
-                <span>¡CORRECTO!</span>
-                <span className="text-xs font-normal opacity-90">+100 PTS</span>
-              </button>
-
-              <button
-                onClick={() => handleCommand('TRIGGER_SOUND', 'error', 70)}
-                disabled={isActionDisabled}
-                className={`py-5 px-3 rounded-2xl font-black text-base shadow-lg border-2 flex flex-col items-center justify-center gap-1 transition-all ${
-                  isActionDisabled
-                    ? 'opacity-40 cursor-not-allowed bg-slate-900 border-slate-800 text-slate-500'
-                    : 'bg-gradient-to-b from-red-600 to-red-800 active:scale-95 text-white shadow-red-900/40 border-red-500/50'
-                }`}
-              >
-                <XCircle className="w-7 h-7" />
-                <span>FALLO / STRIKE</span>
-                <span className="text-xs font-normal opacity-90">Buzzer ❌</span>
-              </button>
-            </div>
-
-            {/* Giant Points Grid */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3">
-              <span className="text-[11px] uppercase font-bold text-slate-400 block mb-2 tracking-wider">
-                Sumar / Restar Puntos al Turno Actual:
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { pts: 1, label: '+1', color: 'from-blue-600 to-blue-700' },
-                  { pts: 5, label: '+5', color: 'from-blue-600 to-blue-700' },
-                  { pts: 10, label: '+10', color: 'from-indigo-600 to-indigo-700' },
-                  { pts: 20, label: '+20', color: 'from-indigo-600 to-indigo-700' },
-                  { pts: 50, label: '+50', color: 'from-amber-600 to-amber-700' },
-                  { pts: 100, label: '+100', color: 'from-amber-600 to-amber-700' },
-                  { pts: -1, label: '-1', color: 'from-slate-800 to-slate-900' },
-                  { pts: -5, label: '-5', color: 'from-slate-800 to-slate-900' },
-                  { pts: -10, label: '-10', color: 'from-red-950 to-red-900' },
-                ].map((item) => (
-                  <button
-                    key={item.pts}
-                    onClick={() =>
-                      handleCommand(
-                        'QUICK_ADJUST',
-                        { teamId: activeTeam?.id, delta: item.pts },
-                        item.pts > 0 ? 40 : 25
-                      )
-                    }
-                    disabled={isActionDisabled}
-                    className={`py-3.5 rounded-xl font-mono font-black text-lg transition-all border ${
-                      isActionDisabled
-                        ? 'opacity-40 cursor-not-allowed bg-slate-950 border-slate-800 text-slate-600'
-                        : `text-white bg-gradient-to-b ${item.color} active:scale-95 shadow border-white/10`
+            <section className="space-y-2">
+              <Titulo>Puntos por equipo</Titulo>
+              {s.teams.map((t) => {
+                const tieneTurno = t.id === s.turn.activeTeamId;
+                return (
+                  <div
+                    key={t.id}
+                    className={`relative overflow-hidden rounded-2xl border bg-[var(--c-panel)] p-3 ${
+                      tieneTurno ? 'border-amber-500/50' : 'border-[var(--c-line)]'
                     }`}
                   >
-                    {item.label}
+                    <span className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: t.color }} aria-hidden />
+                    <div className="mb-2.5 flex items-center justify-between gap-2 pl-1">
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-[16px] font-bold leading-tight">{t.name}</p>
+                        <button
+                          onClick={() => enviar('SELECT_TURN', { teamId: t.id })}
+                          disabled={bloqueado || tieneTurno}
+                          className={`mt-0.5 text-[13px] font-semibold ${tieneTurno ? 'text-amber-300' : 'text-[var(--c-accent)]'}`}
+                        >
+                          {tieneTurno ? 'En turno' : 'Dar turno'}
+                        </button>
+                      </div>
+                      <p className="font-mono text-[28px] font-black leading-none">{t.score}</p>
+                    </div>
+                    <div className="grid grid-cols-4 gap-1.5 pl-1">
+                      {[-5, -1, 1, 5, 10, 20, 50, 100].map((d) => (
+                        <button
+                          key={d}
+                          onClick={() => enviar('QUICK_ADJUST', { teamId: t.id, delta: d }, d > 0 ? 30 : 20)}
+                          disabled={bloqueado}
+                          className={`h-11 rounded-xl font-mono text-[16px] font-bold transition-transform active:scale-95 disabled:opacity-40 ${
+                            d < 0 ? 'bg-[var(--c-panel-2)] text-[var(--c-text-3)]' : 'bg-[var(--c-panel-2)] text-[var(--c-text)] active:bg-[var(--c-accent)]'
+                          }`}
+                          aria-label={`${d > 0 ? 'Sumar' : 'Restar'} ${Math.abs(d)} a ${t.name}`}
+                        >
+                          {d > 0 ? `+${d}` : d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          </>
+        )}
+
+        {/* ---------------- JUEGO ---------------- */}
+        {pestana === 'juego' && (
+          <PanelJuego s={s} enviar={enviar} bloqueado={bloqueado} nombreEquipo={nombreEquipo} />
+        )}
+
+        {/* ---------------- PULSADORES ---------------- */}
+        {pestana === 'pulsadores' && (
+          <>
+            <section
+              className={`rounded-2xl border p-4 ${
+                b?.status === 'answering'
+                  ? 'border-amber-500/60 bg-amber-500/10'
+                  : b?.status === 'open'
+                  ? 'border-emerald-500/60 bg-emerald-500/10'
+                  : 'border-[var(--c-line)] bg-[var(--c-panel)]'
+              }`}
+            >
+              <p className="text-[12px] font-semibold text-[var(--c-text-3)]">Pulsadores</p>
+              <p className="mt-0.5 text-[22px] font-bold leading-tight">
+                {b?.status === 'answering'
+                  ? `Responde ${nombreEquipo(b.answeringTeamId)}`
+                  : b?.status === 'open'
+                  ? 'Abiertos'
+                  : 'Cerrados'}
+              </p>
+              <p className="mt-1 text-[13px] text-[var(--c-text-3)]">
+                {conectados} {conectados === 1 ? 'celular conectado' : 'celulares conectados'}
+                {b?.excludedTeams?.length ? ` · ${b.excludedTeams.length} fuera en esta pregunta` : ''}
+              </p>
+              {b?.status === 'answering' && b.presses.length > 1 && (
+                <p className="mt-2 text-[13px] text-amber-200">
+                  Orden: {b.presses.map((p, i) => `${i + 1}.º ${nombreEquipo(p.teamId)}`).join(' → ')}
+                </p>
+              )}
+            </section>
+
+            <Interruptor
+              activo={Boolean(b?.config?.useBuzzersInGameStage)}
+              etiqueta="Usar pulsadores en los juegos"
+              ayuda="El equipo que pulsa primero toma el turno del juego"
+              onClick={() => enviar('BUZZER_TOGGLE_GAME', { active: !b?.config?.useBuzzersInGameStage })}
+              disabled={bloqueado}
+              tarjeta
+            />
+
+            <Boton tipo="verde" enorme onClick={() => enviar('BUZZER_OPEN', null, 60)} disabled={bloqueado}>
+              <Zap className="h-6 w-6" /> Abrir pulsadores
+            </Boton>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Boton
+                tipo="verde"
+                grande
+                onClick={() => enviar('BUZZER_JUDGE', { result: 'correct' }, 60)}
+                disabled={bloqueado || b?.status !== 'answering'}
+              >
+                <Check className="h-5 w-5" /> Correcto
+              </Boton>
+              <Boton
+                tipo="rojo"
+                grande
+                onClick={() => enviar('BUZZER_JUDGE', { result: 'incorrect' }, 60)}
+                disabled={bloqueado || b?.status !== 'answering'}
+              >
+                <X className="h-5 w-5" /> Incorrecto
+              </Boton>
+              <Boton tipo="neutro" onClick={() => enviar('BUZZER_CLOSE')} disabled={bloqueado}>
+                Cerrar
+              </Boton>
+              <Boton tipo="neutro" onClick={() => enviar('BUZZER_RESET')} disabled={bloqueado}>
+                <RotateCcw className="h-4 w-4" /> Reiniciar
+              </Boton>
+            </div>
+            {b?.config?.useBuzzersInGameStage && (
+              <p className="text-[13px] text-[var(--c-text-3)]">
+                En los juegos también puedes calificar con «Correcto» y «Fallo» de la pestaña Juego.
+              </p>
+            )}
+
+            <section className="space-y-1.5">
+              <Titulo>Celulares de los equipos</Titulo>
+              {s.teams.map((t) => {
+                const c = b?.connectedClients?.[t.id];
+                return (
+                  <div key={t.id} className="flex items-center justify-between gap-2 rounded-xl bg-[var(--c-panel)] px-3 py-2.5">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: t.color }} />
+                      <span className="truncate text-[14px] font-semibold">{t.name}</span>
+                    </span>
+                    <span className={`shrink-0 text-[13px] ${c?.connected ? 'text-emerald-400' : 'text-[var(--c-text-3)]'}`}>
+                      {c?.connected ? `Conectado · ${c.latencyMs} ms` : 'Desconectado'}
+                    </span>
+                  </div>
+                );
+              })}
+            </section>
+          </>
+        )}
+
+        {/* ---------------- PANTALLA ---------------- */}
+        {pestana === 'pantalla' && (
+          <>
+            <section>
+              <Titulo>Escena al aire</Titulo>
+              <div className="grid grid-cols-3 gap-2">
+                {ESCENAS.map((e) => {
+                  const Icon = e.icon;
+                  const alAire = s.viewMode === e.mode;
+                  return (
+                    <button
+                      key={e.mode}
+                      onClick={() => enviar('SET_VIEW_MODE', { viewMode: e.mode }, 50)}
+                      disabled={bloqueado}
+                      className={`flex h-[74px] flex-col items-center justify-center gap-1.5 rounded-xl border text-[13px] font-semibold transition-colors disabled:opacity-40 ${
+                        alAire ? 'border-red-500/70 bg-red-500/15 text-[var(--c-text)]' : 'border-[var(--c-line)] bg-[var(--c-panel)]'
+                      }`}
+                    >
+                      <Icon className={`h-5 w-5 ${alAire ? 'text-red-400' : 'text-[var(--c-text-3)]'}`} />
+                      {e.label}
+                      {alAire && <span className="sr-only">(al aire)</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[var(--c-line)] bg-[var(--c-panel)] p-3.5">
+              <Titulo>Cronómetro</Titulo>
+              <div className="mb-3 flex rounded-lg border border-[var(--c-line)] bg-[var(--c-bg)] p-0.5">
+                {[
+                  { id: 'countdown', label: 'Regresivo' },
+                  { id: 'stopwatch', label: 'Ascendente' },
+                  { id: 'off', label: 'Apagado' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => enviar('SET_TIMER_MODE', { mode: m.id })}
+                    disabled={bloqueado}
+                    className={`h-9 flex-1 rounded-md text-[13px] ${
+                      s.timer.mode === m.id ? 'bg-[var(--c-panel-2)] font-bold' : 'font-semibold text-[var(--c-text-3)]'
+                    }`}
+                  >
+                    {m.label}
                   </button>
                 ))}
               </div>
-            </div>
-
-            {/* Game Context Action Helpers */}
-            <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-3">
-              <span className="text-[11px] uppercase font-bold text-slate-400 block mb-2 tracking-wider">
-                Acciones del Juego en Pantalla:
-              </span>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => handleCommand('REVEAL_GAME_ANSWER', null, 50)}
-                  disabled={isActionDisabled}
-                  className={`py-3 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow ${
-                    isActionDisabled
-                      ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500'
-                      : 'bg-purple-700 hover:bg-purple-600 active:scale-95 text-white'
-                  }`}
+              <p className={`text-center font-mono text-[52px] font-black leading-none ${s.timer.mode === 'off' ? 'opacity-40' : ''}`}>
+                {formatTimeDisplay(s.timer.mode === 'countdown' ? s.timer.secondsRemaining : s.timer.stopwatchSeconds)}
+              </p>
+              <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
+                <Boton
+                  tipo={s.timer.isRunning ? 'ambar' : 'verde'}
+                  grande
+                  onClick={() => enviar('TOGGLE_TIMER', null, 50)}
+                  disabled={bloqueado || s.timer.mode === 'off'}
                 >
-                  <Eye className="w-4 h-4" />
-                  <span>Revelar Respuesta</span>
-                </button>
-                <button
-                  onClick={() => handleCommand('NEXT_GAME_ITEM', null, 40)}
-                  disabled={isActionDisabled}
-                  className={`py-3 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow ${
-                    isActionDisabled
-                      ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500'
-                      : 'bg-blue-700 hover:bg-blue-600 active:scale-95 text-white'
-                  }`}
-                >
-                  <ChevronRight className="w-4 h-4" />
-                  <span>Siguiente Pregunta</span>
-                </button>
+                  {s.timer.isRunning ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+                  {s.timer.isRunning ? 'Pausar' : 'Iniciar'}
+                </Boton>
+                <Boton tipo="neutro" grande onClick={() => enviar('RESET_TIMER')} disabled={bloqueado} etiqueta="Reiniciar cronómetro">
+                  <RotateCcw className="h-5 w-5" />
+                </Boton>
               </div>
-            </div>
-          </div>
-        )}
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                {[-60, -30, 30, 60].map((d) => (
+                  <Boton key={d} tipo="neutro" onClick={() => enviar('ADJUST_TIMER', { seconds: d }, 20)} disabled={bloqueado}>
+                    {d > 0 ? '+' : '−'}
+                    {Math.abs(d) === 60 ? '1 min' : '30 s'}
+                  </Boton>
+                ))}
+              </div>
+            </section>
 
-        {/* Tab 2: TV Master Scene Switcher */}
-        {activeTab === 'scenes' && (
-          <div className="space-y-2.5 animate-fadeIn">
-            <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1 tracking-wider">
-              Cambiar Salida del Proyector en Vivo:
-            </span>
-            {[
-              {
-                mode: 'RAFFLE_STAGE' as MasterViewMode,
-                label: 'SORTEOS Y RIFAS',
-                desc: 'Ruleta de la fortuna, slots, tómbola y emparejador',
-                icon: Gift,
-                color: 'from-amber-500 to-yellow-500',
-              },
-              {
-                mode: 'GAME_STAGE' as MasterViewMode,
-                label: 'ESCENARIO DE JUEGOS',
-                desc: 'Muestra la dinámica activa (Biblia, Ahorcado, etc.)',
-                icon: Gamepad2,
-                color: 'from-amber-600 to-amber-500',
-              },
-              {
-                mode: 'SCOREBOARD_ONLY' as MasterViewMode,
-                label: 'MARCADOR GIGANTE',
-                desc: 'Marcador deportivo / duelos 1v1 y sets',
-                icon: Tv,
-                color: 'from-blue-600 to-cyan-500',
-              },
-              {
-                mode: 'LEADERBOARD_FULL' as MasterViewMode,
-                label: 'TABLA DE POSICIONES',
-                desc: 'Clasificación general de todos los equipos',
-                icon: Trophy,
-                color: 'from-emerald-600 to-teal-500',
-              },
-              {
-                mode: 'PODIUM_CELEBRATION' as MasterViewMode,
-                label: 'PODIO / GANADORES',
-                desc: 'Ceremonia de premiación con confeti y fanfarria',
-                icon: Award,
-                color: 'from-purple-600 to-pink-500',
-              },
-              {
-                mode: 'BLACKOUT' as MasterViewMode,
-                label: 'PANTALLA NEGRA / INTERMEDIO',
-                desc: 'Pausa momentánea en la proyección',
-                icon: EyeOff,
-                color: 'from-slate-700 to-slate-800',
-              },
-            ].map((sc) => {
-              const Icon = sc.icon;
-              const isActive = masterState.viewMode === sc.mode;
-              return (
-                <button
-                  key={sc.mode}
-                  onClick={() => handleCommand('SET_VIEW_MODE', { viewMode: sc.mode }, 50)}
-                  disabled={isActionDisabled}
-                  className={`w-full p-4 rounded-2xl text-left border-2 flex items-center justify-between transition-all shadow-md ${
-                    isActionDisabled
-                      ? 'opacity-40 cursor-not-allowed bg-slate-900 border-slate-800 text-slate-500'
-                      : isActive
-                      ? `bg-gradient-to-r ${sc.color} text-white border-white shadow-xl active:scale-98`
-                      : 'bg-slate-900/80 border-slate-800 text-slate-300 hover:border-slate-700 active:scale-98'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`p-2.5 rounded-xl ${
-                        isActive ? 'bg-black/30' : 'bg-slate-800 text-slate-400'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-black text-sm">{sc.label}</div>
-                      <div className="text-[11px] opacity-80 mt-0.5">{sc.desc}</div>
-                    </div>
-                  </div>
-
-                  {isActive && (
-                    <span className="px-2 py-0.5 rounded-full bg-black/40 text-[10px] font-black uppercase text-white animate-pulse">
-                      AL AIRE
-                    </span>
+            <section className="rounded-2xl border border-[var(--c-line)] bg-[var(--c-panel)] p-3.5">
+              <div className="flex items-end justify-between">
+                <Titulo>{s.scoreboard.periodTypeLabel || 'Ronda'}</Titulo>
+                <p className="font-mono text-[34px] font-black leading-none">
+                  {s.scoreboard.currentRound}
+                  {s.scoreboard.totalRounds > 0 && (
+                    <span className="text-[16px] font-semibold text-[var(--c-text-3)]"> de {s.scoreboard.totalRounds}</span>
                   )}
-                </button>
-              );
-            })}
-
-            {/* Quick Celebration Trigger */}
-            <div className="pt-2">
-              <button
-                onClick={() => handleCommand('TRIGGER_CELEBRATION', null, 80)}
-                disabled={isActionDisabled}
-                className={`w-full py-3.5 px-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg ${
-                  isActionDisabled
-                    ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500'
-                    : 'bg-gradient-to-r from-amber-500 to-yellow-500 active:scale-95 text-slate-950 shadow-amber-500/20'
-                }`}
-              >
-                <Sparkles className="w-5 h-5 fill-slate-950" />
-                <span>Disparar Celebración y Confeti</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Tab 3: Switch Active Game */}
-        {activeTab === 'games' && (
-          <div className="space-y-2.5 animate-fadeIn">
-            <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1 tracking-wider">
-              Seleccionar Dinámica Activa:
-            </span>
-            <div className="grid grid-cols-1 gap-2">
-              {gameOptions.map((g) => {
-                const Icon = g.icon;
-                const isCurrent = masterState.gameStage.activeGameId === g.id;
-                return (
+                </p>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <Boton tipo="neutro" grande onClick={() => enviar('PREV_ROUND')} disabled={bloqueado}>
+                  <ChevronLeft className="h-5 w-5" /> Anterior
+                </Boton>
+                <Boton tipo="accion" grande onClick={() => enviar('NEXT_ROUND')} disabled={bloqueado}>
+                  Siguiente <ChevronRight className="h-5 w-5" />
+                </Boton>
+              </div>
+              <div className="mt-3 flex rounded-lg border border-[var(--c-line)] bg-[var(--c-bg)] p-0.5">
+                {[
+                  { id: 'one_on_one', label: 'Duelo 1 vs 1' },
+                  { id: 'multiplayer', label: 'Tabla (3+)' },
+                ].map((m) => (
                   <button
-                    key={g.id}
-                    onClick={() => {
-                      handleCommand('SET_ACTIVE_GAME', { gameId: g.id }, 40);
-                      handleCommand('SET_VIEW_MODE', { viewMode: 'GAME_STAGE' }, 40);
-                    }}
-                    disabled={isActionDisabled}
-                    className={`p-3.5 rounded-2xl border flex items-center justify-between transition-all ${
-                      isActionDisabled
-                        ? 'opacity-40 cursor-not-allowed bg-slate-950 border-slate-800 text-slate-600'
-                        : isCurrent
-                        ? 'bg-blue-600/30 border-blue-500 text-white shadow-lg ring-1 ring-blue-400 active:scale-98'
-                        : 'bg-slate-900/70 border-slate-800 text-slate-400 active:scale-98'
+                    key={m.id}
+                    onClick={() => enviar('SET_SCOREBOARD_MODE', { mode: m.id })}
+                    disabled={bloqueado}
+                    className={`h-9 flex-1 rounded-md text-[13px] ${
+                      s.scoreboard.mode === m.id ? 'bg-[var(--c-panel-2)] font-bold' : 'font-semibold text-[var(--c-text-3)]'
                     }`}
                   >
-                    <div className="flex items-center gap-2.5">
-                      <Icon className={`w-5 h-5 ${isCurrent ? 'text-blue-400' : 'text-slate-500'}`} />
-                      <span className="font-bold text-sm text-slate-200">{g.label}</span>
-                    </div>
-
-                    <span
-                      className={`text-[10px] uppercase font-black px-2 py-0.5 rounded ${
-                        isCurrent ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-500'
-                      }`}
-                    >
-                      {isCurrent ? '● Seleccionado' : 'Elegir'}
-                    </span>
+                    {m.label}
                   </button>
-                );
-              })}
-            </div>
-          </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-[var(--c-line)] bg-[var(--c-panel)] p-3.5">
+              <Interruptor
+                activo={s.scene.tickerActive}
+                etiqueta="Cintillo inferior"
+                onClick={() => enviar('SET_TICKER', { active: !s.scene.tickerActive })}
+                disabled={bloqueado}
+              />
+              <textarea
+                value={borradorCintillo ?? s.scene.tickerMessage}
+                onChange={(e) => setBorradorCintillo(e.target.value)}
+                rows={3}
+                maxLength={280}
+                className="mt-2 w-full resize-none rounded-xl border border-[var(--c-line)] bg-[var(--c-bg)] p-3 text-[15px] focus:border-[var(--c-accent)] focus:outline-none"
+                placeholder="Aviso para la parte de abajo del proyector…"
+              />
+              <Boton
+                tipo="accion"
+                onClick={() => {
+                  enviar('SET_TICKER', { message: borradorCintillo ?? s.scene.tickerMessage, active: true });
+                  setBorradorCintillo(null);
+                }}
+                disabled={bloqueado || borradorCintillo === null}
+              >
+                Mostrar este mensaje
+              </Boton>
+            </section>
+
+            <Boton tipo="ambar" grande onClick={() => enviar('TRIGGER_CELEBRATION', null, 80)} disabled={bloqueado}>
+              <Sparkles className="h-5 w-5" /> Celebración con confeti
+            </Boton>
+          </>
         )}
 
-        {/* Tab 4: Sound FX Launchpad */}
-        {activeTab === 'sounds' && (
-          <div className="space-y-3 animate-fadeIn">
-            <span className="text-[11px] uppercase font-bold text-slate-400 block mb-1 tracking-wider">
-              Efectos de Sonido Inmediatos (Web Audio API):
-            </span>
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { sound: 'correct' as const, label: '🔔 Ding (Acierto)', color: 'bg-emerald-600' },
-                { sound: 'error' as const, label: '❌ Buzzer (Error)', color: 'bg-red-600' },
-                { sound: 'turn' as const, label: '🔄 Turno Pop', color: 'bg-blue-600' },
-                { sound: 'timesUp' as const, label: '🎺 Bocina Final', color: 'bg-amber-600' },
-                { sound: 'fanfare' as const, label: '🎉 Fanfarria Campeón', color: 'bg-purple-600' },
-                { sound: 'wheel' as const, label: '🎡 Ruleta Click', color: 'bg-pink-600' },
-                { sound: 'drumroll' as const, label: '🥁 Redoble Tambor', color: 'bg-indigo-600' },
-                { sound: 'splash' as const, label: '💦 Al Agua / Splash', color: 'bg-cyan-700' },
-              ].map((s) => (
+        {/* ---------------- SORTEO ---------------- */}
+        {pestana === 'sorteo' && (
+          <>
+            {s.viewMode !== 'RAFFLE_STAGE' && (
+              <Boton tipo="neutro" onClick={() => enviar('SET_VIEW_MODE', { viewMode: 'RAFFLE_STAGE' })} disabled={bloqueado}>
+                <Tv className="h-4 w-4" /> Poner el sorteo en pantalla
+              </Boton>
+            )}
+            <section className="rounded-2xl border border-[var(--c-line)] bg-[var(--c-panel)] p-3.5">
+              <p className="text-[12px] font-semibold text-[var(--c-text-3)]">Premio</p>
+              <p className="text-[18px] font-bold">{s.raffle.prizeTitle || 'Sorteo'}</p>
+              <p className="mt-1 text-[13px] text-[var(--c-text-3)]">
+                {s.raffle.participants.filter((p) => !p.eliminated).length} de {s.raffle.participants.length} participantes activos ·{' '}
+                {s.raffle.drawRule === 'elimination' ? `eliminación, gana el tiro ${s.raffle.eliminationTargetRound}` : 'gana el que sale'}
+              </p>
+            </section>
+            <div className="grid grid-cols-4 gap-1.5">
+              {MODOS_SORTEO.map((m) => (
                 <button
-                  key={s.sound}
-                  onClick={() => handleCommand('TRIGGER_SOUND', s.sound, 50)}
-                  disabled={isActionDisabled}
-                  className={`py-5 px-3 rounded-2xl font-black text-sm shadow-lg flex items-center justify-center text-center transition-all border ${
-                    isActionDisabled
-                      ? 'opacity-40 cursor-not-allowed bg-slate-900 border-slate-800 text-slate-600'
-                      : `${s.color} active:scale-95 text-white border-white/20`
+                  key={m.id}
+                  onClick={() => enviar('SET_RAFFLE_MODE', { mode: m.id })}
+                  disabled={bloqueado}
+                  className={`h-11 rounded-xl border text-[13px] font-semibold disabled:opacity-40 ${
+                    s.raffle.mode === m.id ? 'border-[var(--c-accent)] bg-[var(--c-accent-soft)]' : 'border-[var(--c-line)] bg-[var(--c-panel)]'
                   }`}
                 >
-                  {s.label}
+                  {m.label}
                 </button>
               ))}
             </div>
-
-            {/* Master Clock Box on phone */}
-            <div className="mt-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                  <span>Cronómetro Maestro</span>
-                </span>
-                <span className="text-xl font-mono font-black text-white">
-                  {formatTimeDisplay(
-                    masterState.timer.mode === 'countdown'
-                      ? masterState.timer.secondsRemaining
-                      : masterState.timer.stopwatchSeconds
-                  )}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <button
-                  onClick={() => handleCommand('TOGGLE_TIMER', null, 40)}
-                  disabled={isActionDisabled}
-                  className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow ${
-                    isActionDisabled
-                      ? 'opacity-40 cursor-not-allowed bg-slate-950 text-slate-600'
-                      : masterState.timer.isRunning
-                      ? 'bg-amber-600 text-slate-950 active:scale-95'
-                      : 'bg-emerald-600 text-white active:scale-95'
-                  }`}
-                >
-                  {masterState.timer.isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                  <span>{masterState.timer.isRunning ? 'Pausar Reloj' : 'Iniciar Reloj'}</span>
-                </button>
-                <button
-                  onClick={() => handleCommand('RESET_TIMER', null, 40)}
-                  disabled={isActionDisabled}
-                  className={`py-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 ${
-                    isActionDisabled
-                      ? 'opacity-40 cursor-not-allowed bg-slate-950 text-slate-600'
-                      : 'bg-slate-800 active:scale-95 text-slate-300'
-                  }`}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  <span>Reiniciar</span>
-                </button>
-              </div>
-            </div>
-          </div>
+            <Boton
+              tipo="ambar"
+              enorme
+              onClick={() => enviar('SPIN_RAFFLE', null, 80)}
+              disabled={bloqueado || Boolean(s.raffle.activeSpin?.isSpinning) || s.raffle.mode === 'team_matcher'}
+            >
+              <Play className="h-6 w-6" /> {s.raffle.activeSpin?.isSpinning ? 'Girando…' : 'Girar'}
+            </Boton>
+            {s.raffle.mode === 'team_matcher' && (
+              <p className="text-[13px] text-[var(--c-text-3)]">El emparejador se maneja desde la consola.</p>
+            )}
+            {s.raffle.lastWinner && (
+              <section className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-3.5">
+                <p className="text-[12px] font-semibold text-amber-300">Último ganador</p>
+                <p className="text-[20px] font-bold">{s.raffle.lastWinner.name}</p>
+                {s.raffle.lastWinner.prize && <p className="text-[13px] text-[var(--c-text-2)]">{s.raffle.lastWinner.prize}</p>}
+              </section>
+            )}
+            <Boton
+              tipo={confirmarReinicioSorteo ? 'rojo' : 'neutro'}
+              onClick={() => {
+                if (!confirmarReinicioSorteo) {
+                  setConfirmarReinicioSorteo(true);
+                  setTimeout(() => setConfirmarReinicioSorteo(false), 4000);
+                  return;
+                }
+                setConfirmarReinicioSorteo(false);
+                enviar('RESET_RAFFLE', null, 60);
+              }}
+              disabled={bloqueado}
+            >
+              <RotateCcw className="h-4 w-4" />
+              {confirmarReinicioSorteo ? 'Toca otra vez para reactivar a todos' : 'Reactivar participantes'}
+            </Boton>
+          </>
         )}
 
-        {/* Tab 5: Buzzer Control (Requirement 6) */}
-        {activeTab === 'buzzers' && (
-          <div className="space-y-4 animate-fadeIn pb-14">
-            {/* Buzzer Status Card */}
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-center">
-              <div className="text-xs uppercase font-black text-slate-400 tracking-wider mb-1">
-                Estado de Pulsadores
-              </div>
-              <div className="text-xl font-black text-white">
-                {masterState.buzzer?.status === 'open' ? (
-                  <span className="text-emerald-400">⚡ ABIERTOS (Esperando)</span>
-                ) : masterState.buzzer?.status === 'answering' ? (
-                  <span className="text-amber-300">
-                    🎤 {masterState.teams.find(t => t.id === masterState.buzzer?.answeringTeamId)?.name || 'Equipo'} Responde
-                  </span>
-                ) : (
-                  <span className="text-slate-400">🔒 Cerrados</span>
-                )}
-              </div>
-
-              {masterState.buzzer?.status === 'answering' && (
-                <div className="mt-3 p-3 rounded-xl bg-slate-950 border border-amber-500/40 text-amber-300 text-xs font-bold">
-                  Orden: {masterState.buzzer.presses.map((p, i) => {
-                    const tm = masterState.teams.find(t => t.id === p.teamId);
-                    return `${i + 1}º ${tm?.name || p.teamId}`;
-                  }).join(' → ')}
-                </div>
-              )}
+        {/* ---------------- SONIDOS ---------------- */}
+        {pestana === 'sonidos' && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              {SONIDOS.map((x) => (
+                <button
+                  key={x.id}
+                  onClick={() => enviar('TRIGGER_SOUND', x.id, 30)}
+                  disabled={bloqueado}
+                  className="flex h-16 items-center gap-3 rounded-xl border border-[var(--c-line)] bg-[var(--c-panel)] px-3.5 text-left text-[15px] font-semibold active:scale-[0.98] disabled:opacity-40"
+                >
+                  <span className="text-[22px] leading-none">{x.icon}</span>
+                  {x.label}
+                </button>
+              ))}
             </div>
-
-            {/* 4 Big Buzzer Action Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => handleCommand('BUZZER_OPEN', null, 50)}
-                disabled={isActionDisabled}
-                className="py-5 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-sm shadow-lg shadow-emerald-900/30 flex flex-col items-center justify-center gap-1.5 disabled:opacity-40"
-              >
-                <Zap className="w-6 h-6 fill-current" />
-                <span>Abrir Pulsadores</span>
-              </button>
-
-              <button
-                onClick={() => handleCommand('BUZZER_RESET', null, 40)}
-                disabled={isActionDisabled}
-                className="py-5 px-3 rounded-2xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 font-black text-sm border border-slate-700 flex flex-col items-center justify-center gap-1.5 disabled:opacity-40"
-              >
-                <RotateCcw className="w-6 h-6" />
-                <span>Reiniciar</span>
-              </button>
-
-              <button
-                onClick={() => handleCommand('BUZZER_JUDGE', { result: 'correct' }, 60)}
-                disabled={isActionDisabled || masterState.buzzer?.status !== 'answering'}
-                className="py-5 px-3 rounded-2xl bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-black text-sm shadow-lg shadow-blue-900/30 flex flex-col items-center justify-center gap-1.5 disabled:opacity-40"
-              >
-                <CheckCircle className="w-6 h-6" />
-                <span>Correcto</span>
-              </button>
-
-              <button
-                onClick={() => handleCommand('BUZZER_JUDGE', { result: 'incorrect' }, 60)}
-                disabled={isActionDisabled || masterState.buzzer?.status !== 'answering'}
-                className="py-5 px-3 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-black text-sm shadow-lg shadow-rose-900/30 flex flex-col items-center justify-center gap-1.5 disabled:opacity-40"
-              >
-                <XCircle className="w-6 h-6" />
-                <span>Incorrecto</span>
-              </button>
-            </div>
-
-            {/* Connected teams status list */}
-            <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-2">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                Equipos conectados
-              </div>
-              {masterState.teams.map(team => {
-                const client = masterState.buzzer?.connectedClients?.[team.id];
-                const isConn = client?.connected;
-                const lat = client?.latencyMs || 0;
-                return (
-                  <div key={team.id} className="flex items-center justify-between text-xs p-2 rounded-xl bg-slate-800/60 border border-slate-700/50">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: team.color }} />
-                      <span className="font-bold text-white">{team.name}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {isConn ? (
-                        <>
-                          <span className="text-emerald-400 font-bold">En Vivo</span>
-                          <span className={`font-mono ${lat > 150 ? 'text-amber-400 font-bold' : 'text-slate-400'}`}>{lat}ms</span>
-                        </>
-                      ) : (
-                        <span className="text-slate-500">Desconectado</span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            <Boton tipo="ambar" grande onClick={() => enviar('TRIGGER_CELEBRATION', null, 80)} disabled={bloqueado}>
+              <Sparkles className="h-5 w-5" /> Celebración con confeti
+            </Boton>
+          </>
         )}
       </main>
 
-      {/* Persistent Bottom Mobile Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#090e1d]/95 backdrop-blur-lg border-t border-slate-800 px-2 py-2 flex items-center justify-around">
-        {[
-          { tab: 'points' as const, label: 'Puntos', icon: Zap },
-          { tab: 'buzzers' as const, label: 'Pulsadores', icon: Radio },
-          { tab: 'scenes' as const, label: 'Escenas', icon: Tv },
-          { tab: 'games' as const, label: 'Juegos', icon: Gamepad2 },
-          { tab: 'sounds' as const, label: 'Sonidos', icon: Volume2 },
-        ].map((item) => {
-          const Icon = item.icon;
-          const isSelected = activeTab === item.tab;
+      {/* Navegación inferior */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-6 border-t border-[var(--c-line)] bg-[var(--c-panel)]/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+        {PESTANAS.map((p) => {
+          const Icon = p.icon;
+          const activa = pestana === p.id;
           return (
             <button
-              key={item.tab}
+              key={p.id}
               onClick={() => {
-                triggerHaptic(20);
-                setActiveTab(item.tab);
+                vibrar(15);
+                setPestana(p.id);
               }}
-              className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all ${
-                isSelected
-                  ? 'text-amber-400 scale-105 font-black'
-                  : 'text-slate-400 hover:text-slate-200 font-medium'
+              aria-current={activa ? 'page' : undefined}
+              className={`flex h-[64px] flex-col items-center justify-center gap-1 text-[11px] ${
+                activa ? 'font-bold text-[var(--c-text)]' : 'font-medium text-[var(--c-text-3)]'
               }`}
             >
-              <Icon className={`w-5 h-5 ${isSelected ? 'stroke-[2.5]' : 'stroke-2'}`} />
-              <span className="text-[10px] tracking-tight">{item.label}</span>
+              <Icon className={`h-5 w-5 ${activa ? 'text-[var(--c-accent)]' : ''}`} />
+              {p.label}
             </button>
           );
         })}
       </nav>
 
-      {/* PIN Unlock Modal (Requirement 2) */}
-      {showPinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="relative w-full max-w-sm bg-[#0b101f] border border-slate-700 rounded-3xl p-6 text-center shadow-2xl">
-            <button
-              onClick={() => setShowPinModal(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg text-slate-400 hover:text-white bg-slate-900"
-              aria-label="Cerrar modal"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <KeyRound className="w-6 h-6" />
+      {/* PIN */}
+      {verPin && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-3 sm:items-center">
+          <form onSubmit={enviarPin} className="w-full max-w-sm rounded-2xl border border-[var(--c-line-strong)] bg-[var(--c-panel)] p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-[17px] font-bold">
+                <KeyRound className="h-5 w-5 text-amber-400" /> PIN de operador
+              </h2>
+              <button type="button" onClick={() => setVerPin(false)} className="rounded-lg p-1.5 text-[var(--c-text-3)]" aria-label="Cerrar">
+                <X className="h-5 w-5" />
+              </button>
             </div>
-
-            <h3 className="text-lg font-black text-white">PIN de Operador</h3>
-            <p className="text-xs text-slate-300 mt-1">
-              Ingresa el PIN de 4 dígitos configurado en la Consola del Director para habilitar los botones de mando.
+            <p className="mb-3 text-[14px] text-[var(--c-text-2)]">
+              Está en la consola, en «⋯ → Control remoto». Sin el PIN solo puedes ver.
             </p>
-            <p className="text-[11px] text-amber-400 font-mono mt-0.5">
-              Sala: <strong>{roomCode}</strong>
-            </p>
-
-            <form onSubmit={handlePinSubmit} className="mt-4 space-y-3">
-              <input
-                type="text"
-                pattern="[0-9]*"
-                inputMode="numeric"
-                maxLength={4}
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                placeholder="••••"
-                autoFocus
-                className="w-full text-center tracking-[0.5em] text-3xl font-mono font-black py-3 px-4 bg-slate-950 border-2 border-slate-700 focus:border-amber-400 rounded-2xl text-white outline-none"
-              />
-
-              {localPinError && (
-                <div className="p-2 rounded-xl bg-red-950/80 border border-red-500/40 text-red-300 text-xs font-medium">
-                  {mensajeErrorRemoto(localPinError) || localPinError}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowPinModal(false)}
-                  className="py-2.5 px-3 rounded-xl text-xs font-bold bg-slate-900 text-slate-300 border border-slate-800"
-                >
-                  Modo Observador
-                </button>
-                <button
-                  type="submit"
-                  className="py-2.5 px-3 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-lg shadow-amber-500/30"
-                >
-                  Desbloquear
-                </button>
-              </div>
-            </form>
-          </div>
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              autoFocus
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+              className="w-full rounded-xl border border-[var(--c-line-strong)] bg-[var(--c-bg)] py-3 text-center font-mono text-[28px] tracking-[0.5em] focus:border-[var(--c-accent)] focus:outline-none"
+              placeholder="••••"
+              aria-label="PIN de 4 números"
+            />
+            {errorPin && <p className="mt-2 text-[14px] text-red-400">{errorPin}</p>}
+            <button type="submit" className="mt-3 h-12 w-full rounded-xl bg-[var(--c-accent)] text-[16px] font-bold text-white">
+              Entrar
+            </button>
+          </form>
         </div>
       )}
     </div>
   );
 };
+
+/* =============================================================
+ * Panel del juego activo
+ * ============================================================= */
+const PanelJuego: React.FC<{
+  s: MasterLiveState;
+  enviar: (cmd: RemoteCommandType, payload?: any, ms?: number) => void;
+  bloqueado: boolean;
+  nombreEquipo: (id?: string | null) => string;
+}> = ({ s, enviar, bloqueado, nombreEquipo }) => {
+  const g = s.gameStage;
+  const id = g.activeGameId;
+  const b = s.buzzer;
+  const especial = id === 'millionaire_show' || id === 'deal_or_nodeal';
+
+  let etiquetaCorrecto = '¡Correcto!';
+  let etiquetaFallo = 'Fallo';
+  if (id === 'family_feud') {
+    etiquetaCorrecto = g.familyFeud.potScore ? `Dar pozo (${g.familyFeud.potScore})` : 'Pozo vacío';
+    etiquetaFallo = `Strike (${g.familyFeud.strikes}/3)`;
+  } else if (id === 'charades') {
+    etiquetaCorrecto = 'Acierto';
+    etiquetaFallo = 'Pasar';
+  } else if (id === 'hangman') {
+    etiquetaCorrecto = 'Resolvió la palabra';
+  }
+
+  return (
+    <>
+      {s.viewMode !== 'GAME_STAGE' && (
+        <Boton tipo="neutro" onClick={() => enviar('SET_VIEW_MODE', { viewMode: 'GAME_STAGE' })} disabled={bloqueado}>
+          <Tv className="h-4 w-4" /> Poner el juego en pantalla
+        </Boton>
+      )}
+
+      {/* Elegir dinámica */}
+      <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-1">
+        {JUEGOS.map((j) => (
+          <button
+            key={j.id}
+            onClick={() => enviar('SET_ACTIVE_GAME', { gameId: j.id })}
+            disabled={bloqueado}
+            className={`h-10 shrink-0 whitespace-nowrap rounded-full border px-3.5 text-[14px] font-semibold disabled:opacity-40 ${
+              id === j.id ? 'border-[var(--c-accent)] bg-[var(--c-accent-soft)] text-[var(--c-text)]' : 'border-[var(--c-line)] bg-[var(--c-panel)] text-[var(--c-text-2)]'
+            }`}
+          >
+            {j.label}
+          </button>
+        ))}
+      </div>
+
+      {b?.config?.useBuzzersInGameStage && (
+        <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--c-line)] bg-[var(--c-panel)] px-3 py-2">
+          <span className="min-w-0 truncate text-[13px] font-semibold">
+            <Zap className="mr-1 inline h-4 w-4 text-[var(--c-text-3)]" />
+            {b.status === 'answering' ? `Responde ${nombreEquipo(b.answeringTeamId)}` : b.status === 'open' ? 'Pulsadores abiertos' : 'Pulsadores cerrados'}
+          </span>
+          <button
+            onClick={() => enviar('BUZZER_OPEN', null, 60)}
+            disabled={bloqueado}
+            className="h-9 shrink-0 rounded-lg bg-emerald-600 px-3 text-[13px] font-bold text-white disabled:opacity-40"
+          >
+            Abrir
+          </button>
+        </div>
+      )}
+
+      {/* Ficha secreta: solo la ve el director en su celular */}
+      <section className="rounded-2xl border border-amber-500/40 bg-[var(--c-panel)] p-3.5">
+        <p className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-amber-300">
+          <Eye className="h-3.5 w-3.5" /> Ficha del director · {JUEGOS.find((j) => j.id === id)?.label}
+        </p>
+        <FichaJuego s={s} enviar={enviar} bloqueado={bloqueado} />
+      </section>
+
+      {/* Navegación del juego */}
+      <div className="grid grid-cols-3 gap-2">
+        <Boton tipo="neutro" grande onClick={() => enviar('PREV_GAME_ITEM')} disabled={bloqueado || id === 'deal_or_nodeal'}>
+          <ChevronLeft className="h-5 w-5" /> Anterior
+        </Boton>
+        <Boton tipo="neutro" grande onClick={() => enviar('REVEAL_GAME_ANSWER')} disabled={bloqueado || especial || id === 'family_feud'}>
+          <Eye className="h-5 w-5" /> Revelar
+        </Boton>
+        <Boton tipo="neutro" grande onClick={() => enviar('NEXT_GAME_ITEM')} disabled={bloqueado || id === 'deal_or_nodeal'}>
+          Siguiente <ChevronRight className="h-5 w-5" />
+        </Boton>
+      </div>
+
+      {especial ? (
+        <p className="rounded-xl bg-[var(--c-panel)] p-3 text-[14px] text-[var(--c-text-2)]">
+          {id === 'millionaire_show'
+            ? 'Los comodines, la respuesta definitiva y retirarse se manejan desde la consola. Aquí ves la respuesta correcta.'
+            : 'Abrir maletines y la oferta de la banca se manejan desde la consola.'}
+        </p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <Boton
+            tipo="verde"
+            enorme
+            onClick={() => enviar('GAME_CORRECT', null, 70)}
+            disabled={bloqueado || (id === 'family_feud' && !g.familyFeud.potScore)}
+          >
+            <Check className="h-6 w-6" /> {etiquetaCorrecto}
+          </Boton>
+          <Boton
+            tipo={id === 'charades' ? 'neutro' : 'rojo'}
+            enorme
+            onClick={() => enviar(id === 'charades' ? 'CHARADES_SKIP' : 'GAME_ERROR', null, 70)}
+            disabled={bloqueado}
+          >
+            <X className="h-6 w-6" /> {etiquetaFallo}
+          </Boton>
+        </div>
+      )}
+
+      {id === 'charades' && (
+        <div className="grid grid-cols-3 gap-2">
+          <Boton tipo={g.charades.isRunning ? 'ambar' : 'accion'} onClick={() => enviar('CHARADES_TOGGLE_TIMER')} disabled={bloqueado}>
+            {g.charades.isRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            {g.charades.isRunning ? 'Pausar' : 'Iniciar'}
+          </Boton>
+          <Boton tipo="neutro" onClick={() => enviar('CHARADES_RESET', { seconds: 60 })} disabled={bloqueado}>
+            <RotateCcw className="h-4 w-4" /> 60 s
+          </Boton>
+          <Boton tipo="verde" onClick={() => enviar('CHARADES_AWARD', null, 70)} disabled={bloqueado || g.charades.correctCount === 0}>
+            +{g.charades.correctCount * 50}
+          </Boton>
+        </div>
+      )}
+    </>
+  );
+};
+
+const FichaJuego: React.FC<{
+  s: MasterLiveState;
+  enviar: (cmd: RemoteCommandType, payload?: any, ms?: number) => void;
+  bloqueado: boolean;
+}> = ({ s, enviar, bloqueado }) => {
+  const g = s.gameStage;
+  const Pregunta = ({ children }: { children: React.ReactNode }) => (
+    <p className="text-[17px] font-semibold leading-snug">{children}</p>
+  );
+  const Respuesta = ({ children }: { children: React.ReactNode }) => (
+    <p className="mt-2 rounded-lg bg-emerald-500/15 px-3 py-2 text-[16px] font-bold text-emerald-300">{children}</p>
+  );
+  const Pie = ({ children }: { children: React.ReactNode }) => (
+    <p className="mt-2 text-[13px] text-[var(--c-text-3)]">{children}</p>
+  );
+  const pos = (i: number, n: number) => `${i + 1} de ${n}`;
+
+  switch (g.activeGameId) {
+    case 'bible_book': {
+      const st = g.bibleBook;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin preguntas cargadas.</Pie>;
+      return (
+        <>
+          <Pregunta>{it.verseOrEvent}</Pregunta>
+          <Respuesta>
+            {it.book}
+            {it.reference ? ` · ${it.reference}` : ''}
+          </Respuesta>
+          <Pie>
+            {pos(st.currentIndex, st.items.length)} · {it.points} pts{st.revealed ? ' · revelada' : ''}
+            {st.pointsAwarded ? ' · puntos dados' : ''}
+          </Pie>
+        </>
+      );
+    }
+    case 'who_said_it': {
+      const st = g.whoSaidIt;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin frases cargadas.</Pie>;
+      return (
+        <>
+          <Pregunta>{it.quote}</Pregunta>
+          <Respuesta>{it.author}</Respuesta>
+          {it.context && <Pie>{it.context}</Pie>}
+          <Pie>
+            {pos(st.currentIndex, st.items.length)} · {it.points} pts{st.pointsAwarded ? ' · puntos dados' : ''}
+          </Pie>
+        </>
+      );
+    }
+    case 'hangman': {
+      const st = g.hangman;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin palabras cargadas.</Pie>;
+      const usadas = st.guessedLetters.map(sinAcento);
+      const mascara = it.word
+        .split('')
+        .map((c) => (c === ' ' ? '  ' : usadas.includes(sinAcento(c)) || st.solved ? c : '_'))
+        .join(' ');
+      return (
+        <>
+          <p className="font-mono text-[22px] font-bold tracking-wider">{mascara}</p>
+          <Respuesta>{it.word}</Respuesta>
+          <Pie>
+            {it.category} · intentos fallidos {st.strikes}/{st.maxStrikes}
+            {st.solved ? ' · resuelta' : st.gameOver ? ' · se acabaron los intentos' : ''}
+          </Pie>
+          <div className="mt-3 grid grid-cols-7 gap-1">
+            {LETRAS.map((l) => {
+              const usada = usadas.includes(sinAcento(l));
+              const enPalabra = it.word.split('').some((c) => sinAcento(c) === sinAcento(l));
+              return (
+                <button
+                  key={l}
+                  onClick={() => enviar('HANGMAN_GUESS', { letter: l }, 25)}
+                  disabled={bloqueado || usada || st.solved || st.gameOver}
+                  className={`h-10 rounded-lg text-[15px] font-bold ${
+                    usada
+                      ? enPalabra
+                        ? 'bg-emerald-500/20 text-emerald-300'
+                        : 'bg-red-500/15 text-red-300/70 line-through'
+                      : 'bg-[var(--c-panel-2)] active:bg-[var(--c-accent)]'
+                  }`}
+                >
+                  {l}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      );
+    }
+    case 'charades': {
+      const st = g.charades;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin palabras cargadas.</Pie>;
+      return (
+        <>
+          <p className="text-[24px] font-bold leading-tight">{it.word}</p>
+          <Pie>{it.category}</Pie>
+          <div className="mt-3 flex items-end justify-between">
+            <p className="text-[14px] text-[var(--c-text-2)]">
+              Aciertos <strong className="font-mono text-[20px] text-[var(--c-text)]">{st.correctCount}</strong> · Pasadas{' '}
+              {st.skippedCount}
+            </p>
+            <p className={`font-mono text-[34px] font-black leading-none ${st.remainingSeconds <= 10 ? 'text-amber-300' : ''}`}>
+              {formatTimeDisplay(st.remainingSeconds)}
+            </p>
+          </div>
+        </>
+      );
+    }
+    case 'family_feud': {
+      const st = g.familyFeud;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin encuestas cargadas.</Pie>;
+      return (
+        <>
+          <Pregunta>{it.question}</Pregunta>
+          <div className="mt-3 space-y-1.5">
+            {it.answers.map((a, i) => {
+              const destapada = st.revealedAnswerIds.includes(a.id);
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => enviar('FEUD_REVEAL', { answerId: a.id }, 40)}
+                  disabled={bloqueado}
+                  className={`flex h-12 w-full items-center justify-between gap-2 rounded-xl border px-3 text-left text-[15px] font-semibold ${
+                    destapada ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-200' : 'border-[var(--c-line)] bg-[var(--c-panel-2)]'
+                  }`}
+                >
+                  <span className="min-w-0 truncate">
+                    {i + 1}. {a.text}
+                  </span>
+                  <span className="shrink-0 font-mono">{a.points}</span>
+                </button>
+              );
+            })}
+          </div>
+          <Pie>
+            Toca una respuesta para destaparla · Pozo {st.potScore} · Strikes {st.strikes}/3
+          </Pie>
+        </>
+      );
+    }
+    case 'trivia_show': {
+      const st = g.triviaShow;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin preguntas cargadas.</Pie>;
+      return (
+        <>
+          <Pregunta>{it.question}</Pregunta>
+          <div className="mt-3 grid grid-cols-1 gap-1.5">
+            {(['A', 'B', 'C', 'D'] as const).map((k) => {
+              const correcta = it.correctAnswer === k;
+              const elegida = st.selectedOption === k;
+              const oculta = st.hiddenOptions5050.includes(k);
+              return (
+                <button
+                  key={k}
+                  onClick={() => enviar('TRIVIA_SELECT', { option: k }, 30)}
+                  disabled={bloqueado || oculta}
+                  className={`flex min-h-12 items-center gap-2 rounded-xl border px-3 py-2 text-left text-[15px] ${
+                    elegida ? 'border-[var(--c-accent)] bg-[var(--c-accent-soft)]' : 'border-[var(--c-line)] bg-[var(--c-panel-2)]'
+                  } ${oculta ? 'opacity-30' : ''}`}
+                >
+                  <span className="font-bold">{k}.</span>
+                  <span className="min-w-0 flex-1">{it.options[k]}</span>
+                  {correcta && <Check className="h-5 w-5 shrink-0 text-emerald-400" aria-label="Correcta" />}
+                </button>
+              );
+            })}
+          </div>
+          <Pie>
+            Toca la opción que eligió el equipo (se marca en pantalla). {it.points} pts
+            {st.revealed ? ' · revelada' : ''}
+          </Pie>
+        </>
+      );
+    }
+    case 'anagram_wheel': {
+      const st = g.anagramWheel;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin palabras cargadas.</Pie>;
+      return (
+        <>
+          <p className="font-mono text-[24px] font-bold tracking-[0.2em]">{it.scrambledWord}</p>
+          <Respuesta>{it.originalWord}</Respuesta>
+          <Pie>
+            {it.category} · {it.points} pts
+            {st.selectedReward ? ` · ruleta: ${st.selectedReward.label}` : ''}
+          </Pie>
+        </>
+      );
+    }
+    case 'music_karaoke': {
+      const st = g.musicKaraoke;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin canciones cargadas.</Pie>;
+      return (
+        <>
+          <Respuesta>
+            {it.title} · {it.artist}
+          </Respuesta>
+          <Pie>
+            {it.category} · la reproducción se controla desde la consola{st.revealedSong ? ' · revelada' : ''}
+          </Pie>
+        </>
+      );
+    }
+    case 'millionaire_show': {
+      const st = g.millionaireShow;
+      const it = st.items[st.currentIndex];
+      if (!it) return <Pie>Sin preguntas cargadas.</Pie>;
+      return (
+        <>
+          <Pie>
+            Nivel {it.level} · {it.points} pts · acumulado {st.accumulatedPoints}
+          </Pie>
+          <Pregunta>{it.question}</Pregunta>
+          <Respuesta>
+            {it.correctAnswer}. {it.options[it.correctAnswer]}
+          </Respuesta>
+        </>
+      );
+    }
+    case 'deal_or_nodeal': {
+      const st = g.dealOrNoDeal;
+      const abiertos = st.briefcases.filter((x) => x.isOpen).length;
+      return (
+        <>
+          <Pregunta>
+            {abiertos} de {st.briefcases.length} maletines abiertos
+          </Pregunta>
+          <Pie>
+            Maletín del concursante: {st.contestantBriefcaseNumber ?? '—'} · Oferta de la banca: {st.bankerOffer || '—'}
+          </Pie>
+        </>
+      );
+    }
+    default:
+      return null;
+  }
+};
+
+/* =============================================================
+ * Piezas
+ * ============================================================= */
+const Titulo: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h2 className="mb-2 text-[13px] font-bold text-[var(--c-text-2)]">{children}</h2>
+);
+
+const Boton: React.FC<{
+  tipo: 'accion' | 'neutro' | 'verde' | 'rojo' | 'ambar';
+  grande?: boolean;
+  enorme?: boolean;
+  disabled?: boolean;
+  etiqueta?: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}> = ({ tipo, grande, enorme, disabled, etiqueta, onClick, children }) => {
+  const colores = {
+    accion: 'bg-[var(--c-accent)] text-white',
+    neutro: 'border border-[var(--c-line)] bg-[var(--c-panel)] text-[var(--c-text)]',
+    verde: 'bg-emerald-600 text-white',
+    rojo: 'bg-red-600 text-white',
+    ambar: 'bg-amber-500 text-slate-950',
+  }[tipo];
+  const alto = enorme ? 'h-[72px] text-[17px]' : grande ? 'h-14 text-[16px]' : 'h-11 text-[14px]';
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={etiqueta}
+      className={`flex w-full items-center justify-center gap-2 rounded-xl px-3 font-bold transition-transform active:scale-[0.97] disabled:opacity-40 ${colores} ${alto}`}
+    >
+      {children}
+    </button>
+  );
+};
+
+const BotonIcono: React.FC<{
+  etiqueta: string;
+  onClick: () => void;
+  disabled?: boolean;
+  activo?: boolean;
+  children: React.ReactNode;
+}> = ({ etiqueta, onClick, disabled, activo, children }) => (
+  <button
+    onClick={onClick}
+    disabled={disabled}
+    title={etiqueta}
+    aria-label={etiqueta}
+    aria-pressed={activo}
+    className={`flex h-9 w-9 items-center justify-center rounded-lg transition-colors disabled:opacity-40 ${
+      activo === false ? 'text-[var(--c-text-3)]' : 'text-[var(--c-text-2)]'
+    } active:bg-[var(--c-panel-2)]`}
+  >
+    {children}
+  </button>
+);
+
+const Interruptor: React.FC<{
+  activo: boolean;
+  etiqueta: string;
+  ayuda?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  tarjeta?: boolean;
+}> = ({ activo, etiqueta, ayuda, onClick, disabled, tarjeta }) => (
+  <button
+    role="switch"
+    aria-checked={activo}
+    onClick={onClick}
+    disabled={disabled}
+    className={`flex w-full items-center justify-between gap-3 text-left disabled:opacity-40 ${
+      tarjeta ? 'rounded-2xl border border-[var(--c-line)] bg-[var(--c-panel)] px-3.5 py-3' : 'py-1.5'
+    }`}
+  >
+    <span className="min-w-0">
+      <span className="block text-[15px] font-semibold">{etiqueta}</span>
+      {ayuda && <span className="block text-[13px] text-[var(--c-text-3)]">{ayuda}</span>}
+    </span>
+    <span className={`relative h-7 w-12 shrink-0 rounded-full transition-colors ${activo ? 'bg-[var(--c-accent)]' : 'bg-[var(--c-line-strong)]'}`} aria-hidden>
+      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white transition-all ${activo ? 'left-6' : 'left-1'}`} />
+    </span>
+  </button>
+);

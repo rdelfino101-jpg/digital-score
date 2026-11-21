@@ -649,7 +649,25 @@ export type RemoteCommandType =
   | 'BUZZER_CLOSE'
   | 'BUZZER_RESET'
   | 'BUZZER_JUDGE'
-  | 'UNDO_LAST_ACTION';
+  | 'UNDO_LAST_ACTION'
+  // Control remoto completo
+  | 'BUZZER_TOGGLE_GAME'
+  | 'TOGGLE_AUTO_ADVANCE'
+  | 'GAME_CORRECT'
+  | 'GAME_ERROR'
+  | 'HANGMAN_GUESS'
+  | 'FEUD_REVEAL'
+  | 'TRIVIA_SELECT'
+  | 'CHARADES_SKIP'
+  | 'CHARADES_TOGGLE_TIMER'
+  | 'CHARADES_RESET'
+  | 'CHARADES_AWARD'
+  | 'ADJUST_TIMER'
+  | 'SET_TIMER_MODE'
+  | 'NEXT_ROUND'
+  | 'PREV_ROUND'
+  | 'SET_TICKER'
+  | 'SET_SCOREBOARD_MODE';
 
 export interface RemoteCommandMessage {
   type: 'REMOTE_COMMAND';

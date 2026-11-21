@@ -19,35 +19,9 @@ export const CharadesController: React.FC<CharadesControllerProps> = ({
   const stage = state.gameStage.charades;
   const currentItem = stage.items[stage.currentIndex];
 
-  // Round timer loop in operator console
-  useEffect(() => {
-    if (!stage.isRunning) return;
-
-    const interval = setInterval(() => {
-      onUpdateState((prev) => {
-        const nextRem = Math.max(0, prev.gameStage.charades.remainingSeconds - 1);
-        if (nextRem === 0) {
-          studioAudio.playTimesUp();
-        } else if (nextRem <= 5) {
-          studioAudio.playTick();
-        }
-
-        return {
-          ...prev,
-          gameStage: {
-            ...prev.gameStage,
-            charades: {
-              ...prev.gameStage.charades,
-              remainingSeconds: nextRem,
-              isRunning: nextRem > 0,
-            },
-          },
-        };
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [stage.isRunning]);
+  // El reloj de la ronda lo lleva la consola (App.tsx) para que corra igual desde el
+  // control remoto. Antes también corría aquí y, con esta pantalla abierta, bajaba
+  // 2 segundos por segundo.
 
   const handleToggleTimer = () => {
     onUpdateState((prev) => ({

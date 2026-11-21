@@ -67,6 +67,24 @@ import {
 } from './utils/raffleEngineRules';
 import { openSmartProjector } from './utils/smartProjector';
 import {
+  accionCorrecto,
+  accionFallo,
+  accionLetraAhorcado,
+  accionDestaparRespuesta,
+  accionElegirOpcionTrivia,
+  accionCharadaPasar,
+  accionCharadaReloj,
+  accionCharadaReiniciar,
+  accionCharadaPuntos,
+  siguienteRonda,
+  rondaAnterior,
+  ajustarReloj,
+  modoReloj,
+  cintillo,
+  moverPregunta,
+  type ResultadoAccion,
+} from './utils/remoteGameActions';
+import {
   generateRoomCode,
   isValidRoomCode,
   generatePin,
@@ -769,6 +787,23 @@ function DirectorOperatorStudio() {
     handleBroadcastSound('fanfare');
   }, [handleBroadcastSound, updateMaster]);
 
+  // Aplica una acción del control remoto con el mismo camino que los botones de la consola
+  const ejecutarAccionRemota = useCallback(
+    (r: ResultadoAccion | null) => {
+      if (!r) return;
+      if (r.actualizar) updateMaster(r.actualizar);
+      if (r.esError) {
+        handleGameErrorWithBuzzer();
+        return;
+      }
+      if (typeof r.puntos === 'number' && r.puntos > 0) {
+        handleGameAwardWithBuzzer(r.puntos, r.etiqueta || 'Control remoto');
+        if (r.siguienteTurno) handleNextTurn();
+      }
+    },
+    [updateMaster, handleGameErrorWithBuzzer, handleGameAwardWithBuzzer, handleNextTurn]
+  );
+
   // Handle incoming remote commands from mobile devices
   const handleRemoteCommand = useCallback(
     (cmd: RemoteCommandType, payload?: any) => {
@@ -836,6 +871,8 @@ function DirectorOperatorStudio() {
           else if (payload === 'timesUp') studioAudio.playTimesUp();
           else if (payload === 'wheel') studioAudio.playWheelClick();
           else if (payload === 'fanfare') studioAudio.playFanfare();
+          else if (payload === 'drumroll') studioAudio.playDrumroll();
+          else if (payload === 'splash') studioAudio.playEliminatedSplash();
           handleBroadcastSound(payload);
           break;
         }
@@ -885,98 +922,11 @@ function DirectorOperatorStudio() {
           break;
         }
         case 'NEXT_GAME_ITEM': {
-          updateMaster((prev) => {
-            const activeGame = prev.gameStage.activeGameId;
-            const stageKey =
-              activeGame === 'bible_book'
-                ? 'bibleBook'
-                : activeGame === 'who_said_it'
-                ? 'whoSaidIt'
-                : activeGame === 'hangman'
-                ? 'hangman'
-                : activeGame === 'charades'
-                ? 'charades'
-                : activeGame === 'family_feud'
-                ? 'familyFeud'
-                : activeGame === 'trivia_show'
-                ? 'triviaShow'
-                : activeGame === 'anagram_wheel'
-                ? 'anagramWheel'
-                : activeGame === 'millionaire_show'
-                ? 'millionaireShow'
-                : activeGame === 'deal_or_nodeal'
-                ? 'dealOrNoDeal'
-                : 'musicKaraoke';
-
-            const currentStage = prev.gameStage[stageKey] as any;
-            if (currentStage && Array.isArray(currentStage.items)) {
-              const nextIndex = (currentStage.currentIndex + 1) % currentStage.items.length;
-              return {
-                ...prev,
-                gameStage: {
-                  ...prev.gameStage,
-                  [stageKey]: {
-                    ...currentStage,
-                    currentIndex: nextIndex,
-                    revealed: false,
-                    revealedSong: false,
-                    isMusicCut: false,
-                    selectedOption: null,
-                    pointsAwarded: false,
-                  },
-                },
-              };
-            }
-            return prev;
-          });
+          updateMaster(moverPregunta(1));
           break;
         }
         case 'PREV_GAME_ITEM': {
-          updateMaster((prev) => {
-            const activeGame = prev.gameStage.activeGameId;
-            const stageKey =
-              activeGame === 'bible_book'
-                ? 'bibleBook'
-                : activeGame === 'who_said_it'
-                ? 'whoSaidIt'
-                : activeGame === 'hangman'
-                ? 'hangman'
-                : activeGame === 'charades'
-                ? 'charades'
-                : activeGame === 'family_feud'
-                ? 'familyFeud'
-                : activeGame === 'trivia_show'
-                ? 'triviaShow'
-                : activeGame === 'anagram_wheel'
-                ? 'anagramWheel'
-                : activeGame === 'millionaire_show'
-                ? 'millionaireShow'
-                : activeGame === 'deal_or_nodeal'
-                ? 'dealOrNoDeal'
-                : 'musicKaraoke';
-
-            const currentStage = prev.gameStage[stageKey] as any;
-            if (currentStage && Array.isArray(currentStage.items)) {
-              const nextIndex =
-                (currentStage.currentIndex - 1 + currentStage.items.length) % currentStage.items.length;
-              return {
-                ...prev,
-                gameStage: {
-                  ...prev.gameStage,
-                  [stageKey]: {
-                    ...currentStage,
-                    currentIndex: nextIndex,
-                    revealed: false,
-                    revealedSong: false,
-                    isMusicCut: false,
-                    selectedOption: null,
-                    pointsAwarded: false,
-                  },
-                },
-              };
-            }
-            return prev;
-          });
+          updateMaster(moverPregunta(-1));
           break;
         }
         case 'REVEAL_GAME_ANSWER': {
@@ -1130,8 +1080,100 @@ function DirectorOperatorStudio() {
           break;
         }
         case 'BUZZER_JUDGE': {
+          // Mismo camino que la pestaña Pulsadores: la consola da los puntos
           if (payload?.result === 'correct' || payload?.result === 'incorrect') {
-            syncChannelRef.current?.sendBuzzerJudge(payload.result);
+            handleBuzzerJudgeFromPanel(payload.result);
+          }
+          break;
+        }
+        case 'BUZZER_TOGGLE_GAME': {
+          const activo = Boolean(payload?.active);
+          syncChannelRef.current?.sendBuzzerConfigUpdate({ useBuzzersInGameStage: activo });
+          break;
+        }
+        case 'TOGGLE_AUTO_ADVANCE': {
+          updateMaster((prev) => ({ ...prev, turn: { ...prev.turn, autoAdvanceOnScore: !prev.turn.autoAdvanceOnScore } }));
+          break;
+        }
+        case 'GAME_CORRECT': {
+          ejecutarAccionRemota(accionCorrecto(masterStateRef.current));
+          break;
+        }
+        case 'GAME_ERROR': {
+          ejecutarAccionRemota(accionFallo(masterStateRef.current));
+          break;
+        }
+        case 'HANGMAN_GUESS': {
+          if (typeof payload?.letter === 'string' && payload.letter.length === 1) {
+            const r = accionLetraAhorcado(masterStateRef.current, payload.letter);
+            if (r && !r.esError) {
+              const item = masterStateRef.current.gameStage.hangman.items[masterStateRef.current.gameStage.hangman.currentIndex];
+              const n = payload.letter.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+              const acierta = item?.word.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().includes(n);
+              if (acierta) studioAudio.playCorrect();
+              else studioAudio.playError();
+            }
+            ejecutarAccionRemota(r);
+          }
+          break;
+        }
+        case 'FEUD_REVEAL': {
+          if (payload?.answerId) {
+            if (!masterStateRef.current.gameStage.familyFeud.revealedAnswerIds.includes(payload.answerId)) {
+              studioAudio.playCorrect();
+              handleBroadcastSound('correct');
+            }
+            ejecutarAccionRemota(accionDestaparRespuesta(payload.answerId));
+          }
+          break;
+        }
+        case 'TRIVIA_SELECT': {
+          if (['A', 'B', 'C', 'D'].includes(payload?.option)) {
+            ejecutarAccionRemota(accionElegirOpcionTrivia(payload.option));
+          }
+          break;
+        }
+        case 'CHARADES_SKIP': {
+          ejecutarAccionRemota(accionCharadaPasar());
+          break;
+        }
+        case 'CHARADES_TOGGLE_TIMER': {
+          ejecutarAccionRemota(accionCharadaReloj());
+          break;
+        }
+        case 'CHARADES_RESET': {
+          ejecutarAccionRemota(accionCharadaReiniciar(typeof payload?.seconds === 'number' ? payload.seconds : 60));
+          break;
+        }
+        case 'CHARADES_AWARD': {
+          ejecutarAccionRemota(accionCharadaPuntos(masterStateRef.current));
+          break;
+        }
+        case 'ADJUST_TIMER': {
+          if (typeof payload?.seconds === 'number') updateMaster(ajustarReloj(payload.seconds));
+          break;
+        }
+        case 'SET_TIMER_MODE': {
+          if (payload?.mode === 'countdown' || payload?.mode === 'stopwatch' || payload?.mode === 'off') {
+            updateMaster(modoReloj(payload.mode));
+          }
+          break;
+        }
+        case 'NEXT_ROUND': {
+          updateMaster(siguienteRonda);
+          break;
+        }
+        case 'PREV_ROUND': {
+          updateMaster(rondaAnterior);
+          break;
+        }
+        case 'SET_TICKER': {
+          updateMaster(cintillo({ activo: payload?.active, mensaje: payload?.message }));
+          break;
+        }
+        case 'SET_SCOREBOARD_MODE': {
+          if (payload?.mode === 'one_on_one' || payload?.mode === 'multiplayer') {
+            updateMaster((prev) => ({ ...prev, scoreboard: { ...prev.scoreboard, mode: payload.mode } }));
           }
           break;
         }
@@ -1146,6 +1188,8 @@ function DirectorOperatorStudio() {
       handleBroadcastSound,
       handleUndo,
       updateMaster,
+      handleBuzzerJudgeFromPanel,
+      ejecutarAccionRemota,
     ]
   );
 
@@ -1258,6 +1302,8 @@ function DirectorOperatorStudio() {
         if (nextSec === 0 && currentSec > 0) {
           studioAudio.playTimesUp();
           handleBroadcastSound('timesUp');
+        } else if (nextSec > 0 && nextSec <= 5) {
+          studioAudio.playTick();
         }
 
         const nextCharades = {
